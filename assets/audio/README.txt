@@ -1,7 +1,12 @@
-Taruh lagu musim dingin di folder ini.
+Seasonal audio folder.
 
-Default yang dibaca program:
-assets/audio/winter.mp3
+Recommended files:
+- assets/audio/autumn_memory.ogg: Musim Gugur (Belajar melepaskan)
+- assets/audio/spring_hope.ogg: Musim Semi (Harapan baru)
+- assets/audio/summer_courage.ogg: Musim Panas (Berani dan penuh tenaga)
+- assets/audio/winter_silence.ogg: Musim Dingin (Hening dan menerima)
 
-Kalau nama atau format file berbeda, ubah nilai "music_path" di season_winter.py.
-Pygame biasanya mendukung .mp3, .ogg, dan .wav, tergantung instalasi SDL_mixer.
+Current notes:
+- Pygame usually supports .mp3, .ogg, and .wav, depending on SDL_mixer.
+- Prefer .ogg for small looping ambience files.
+- Only use audio you are licensed to use.

@@ -1,0 +1,17 @@
+Season: Musim Gugur (autumn)
+Planned audio file: assets/audio/autumn_memory.ogg
+Suggested volume: 0.36
+
+Emotion:
+- Belajar melepaskan
+- Yang jatuh tidak selalu hilang, kadang menjadi ingatan.
+
+Mood keywords:
+- solo piano, shakuhachi, low strings, wind, dry leaves
+
+Reference mood:
+- Spitz - Kaede / Aka Tombo mood, but use licensed or royalty-free audio.
+
+Note:
+- This is a planning placeholder, not an audio file.
+- Use licensed, royalty-free, or self-created audio before enabling it in season files.

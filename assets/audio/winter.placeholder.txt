@@ -1,0 +1,17 @@
+Season: Musim Dingin (winter)
+Planned audio file: assets/audio/winter_silence.ogg
+Suggested volume: 0.45
+
+Emotion:
+- Hening dan menerima
+- Saat dunia melambat, manusia belajar pulang ke dalam diri.
+
+Mood keywords:
+- music box, soft piano, choir pad, snow wind, distant bells
+
+Reference mood:
+- Yuki no Hana / Konayuki mood, but use licensed or royalty-free audio.
+
+Note:
+- This is a planning placeholder, not an audio file.
+- Use licensed, royalty-free, or self-created audio before enabling it in season files.

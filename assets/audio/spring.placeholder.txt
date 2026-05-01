@@ -1,0 +1,17 @@
+Season: Musim Semi (spring)
+Planned audio file: assets/audio/spring_hope.ogg
+Suggested volume: 0.38
+
+Emotion:
+- Harapan baru
+- Semua hal kecil mulai tumbuh lagi.
+
+Mood keywords:
+- gentle piano, koto, soft strings, morning birds, light rain
+
+Reference mood:
+- Ikimonogakari - SAKURA / Sakura Sakura mood, but use licensed or royalty-free audio.
+
+Note:
+- This is a planning placeholder, not an audio file.
+- Use licensed, royalty-free, or self-created audio before enabling it in season files.
