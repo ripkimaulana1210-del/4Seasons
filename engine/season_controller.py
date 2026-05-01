@@ -159,6 +159,21 @@ class SeasonController:
             return blend_color(start, end, amount)
         return lerp(start, end, amount)
 
+    def seasonal_effect_visibility(self, effect_name):
+        transition = self.transition_snapshot()
+        if transition is None:
+            return 1.0 if self.current.get("seasonal_effect") == effect_name else 0.0
+
+        from_match = transition["from"].get("seasonal_effect") == effect_name
+        to_match = transition["to"].get("seasonal_effect") == effect_name
+        if from_match and to_match:
+            return 1.0
+        if from_match:
+            return 1.0 - transition["eased"]
+        if to_match:
+            return transition["eased"]
+        return 0.0
+
     def day_state(self):
         phase = self.day_time % 1.0
         sun_angle = phase * math.tau
@@ -190,6 +205,7 @@ class SeasonController:
         night_horizon = self.blended_season_setting("sky_night_horizon")
         cloud_color = self.blended_season_setting("cloud_color")
         cloud_density = self.blended_season_setting("cloud_density")
+        summer_clarity = self.seasonal_effect_visibility("summer") * (1.0 - cloud_density * 0.20)
 
         top = blend_color(day_top, dusk_top, dusk)
         horizon = blend_color(day_horizon, dusk_horizon, dusk)
@@ -230,7 +246,7 @@ class SeasonController:
                 self.transition_to["light_intensity"],
                 self.transition_snapshot()["eased"],
             )
-        light_intensity = max(0.18, base_intensity * (0.26 + daylight * 0.78) + dusk * 0.08)
+        light_intensity = max(0.30, base_intensity * (0.36 + daylight * 0.82) + dusk * 0.12)
 
         return {
             **day,
@@ -249,7 +265,8 @@ class SeasonController:
             "moon_alpha": smoothstep(night),
             "moon_color": self.blended_season_setting("moon_light_color"),
             "star_color": self.blended_season_setting("star_color"),
-            "star_intensity": max(0.0, (night - cloud_density * 0.22) * 1.15),
+            "star_intensity": max(0.0, (night - cloud_density * (0.12 - summer_clarity * 0.04)) * (1.55 + summer_clarity * 0.80)),
+            "summer_sky_clarity": summer_clarity,
             "cloud_color": blend_color(cloud_color, self.blended_season_setting("night_fog_color"), night * 0.48),
             "cloud_density": cloud_density,
             "cloud_alpha": cloud_density * (0.28 + daylight * 0.48 + night * 0.22),

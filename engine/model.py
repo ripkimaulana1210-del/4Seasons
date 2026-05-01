@@ -229,6 +229,65 @@ class NightGlow(SunDisc):
         super().update()
 
 
+class FireflyGlow(SunDisc):
+    def __init__(
+        self,
+        app,
+        center=(0, 1, 0),
+        orbit=(0.32, 0.18, 0.32),
+        scale=(0.026, 0.026, 1.0),
+        color=(1.0, 0.96, 0.42),
+        alpha=0.62,
+        speed=0.18,
+        phase=0.0,
+    ):
+        self.center = glm.vec3(center)
+        self.orbit = glm.vec3(orbit)
+        self.base_scale = glm.vec3(scale)
+        self.base_alpha = alpha
+        self.base_color = glm.vec3(color)
+        self.speed = speed
+        self.phase = phase
+        super().__init__(app, pos=center, rot=(0, 0, 0), scale=scale, color=color, alpha=0.0)
+
+    def summer_visibility(self):
+        transition = self.app.season_controller.transition_snapshot()
+        if transition is None:
+            return 1.0 if self.app.season_controller.current.get("seasonal_effect") == "summer" else 0.0
+
+        from_summer = transition["from"].get("seasonal_effect") == "summer"
+        to_summer = transition["to"].get("seasonal_effect") == "summer"
+        if from_summer and not to_summer:
+            return 1.0 - transition["eased"]
+        if to_summer and not from_summer:
+            return transition["eased"]
+        return 1.0 if from_summer or to_summer else 0.0
+
+    def update(self):
+        t = self.app.time * self.speed + self.phase
+        drift_x = math.cos(t * math.tau * 1.23) + 0.42 * math.sin(t * math.tau * 0.63 + self.phase)
+        drift_z = math.sin(t * math.tau * 1.04) + 0.38 * math.cos(t * math.tau * 0.78 + self.phase * 1.7)
+        drift_y = math.sin(t * math.tau * 1.71 + self.phase * 2.0) + 0.32 * math.cos(t * math.tau * 0.91)
+
+        self.pos = glm.vec3(
+            self.center.x + drift_x * self.orbit.x,
+            self.center.y + drift_y * self.orbit.y,
+            self.center.z + drift_z * self.orbit.z,
+        )
+
+        atmosphere = self.app.season_controller.atmosphere_state()
+        night_visibility = max(atmosphere["night"], atmosphere["dusk"] * 0.72)
+        summer_visibility = self.summer_visibility()
+        pulse = 0.50 + 0.50 * math.sin(self.app.time * 7.4 + self.phase * 17.0)
+        scale_mul = 0.74 + pulse * 0.34
+
+        self.alpha = self.base_alpha * night_visibility * summer_visibility * (0.36 + pulse * 0.64)
+        self.color = self.base_color
+        self.scale = self.base_scale * scale_mul
+        self.m_model = self.get_model_matrix()
+        super().update()
+
+
 class BaseModelTexture:
     def __init__(
         self,
@@ -511,6 +570,7 @@ class SkyDome:
         self.program["u_horizon_color"].write(glm.vec3(atmosphere["horizon_color"]))
         self.program["u_star_color"].write(glm.vec3(atmosphere["star_color"]))
         self.program["u_star_intensity"].value = atmosphere["star_intensity"]
+        self.program["u_summer_sky_clarity"].value = atmosphere["summer_sky_clarity"]
         self.program["u_dusk"].value = atmosphere["dusk"]
         self.program["u_night"].value = atmosphere["night"]
         self.program["u_time"].value = self.app.time

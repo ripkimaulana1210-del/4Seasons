@@ -6,6 +6,7 @@ from .model import (
     CloudLayer,
     ColorCube,
     ColorPlane,
+    FireflyGlow,
     FloatingPetals,
     FujiPeak,
     FujiSnowcap,
@@ -598,57 +599,117 @@ class Scene:
         self.add_wind(app)
         self.add_rain(app)
 
-    def add_night_lights(self, app):
+    def add_lantern_post(
+        self,
+        app,
+        pos,
+        yaw=0.0,
+        height=0.78,
+        glow_scale=0.36,
+        glow_alpha=0.54,
+        post_color=(0.22, 0.17, 0.12),
+        lamp_color=(1.00, 0.70, 0.34),
+    ):
         add = self.add_object
-        warm = (1.00, 0.70, 0.34)
-        post_color = (0.22, 0.17, 0.12)
+        x, z = pos
+        add(
+            ColorCube(
+                app,
+                pos=(x, height * 0.50, z),
+                rot=(0, yaw, 0),
+                scale=(0.035, height * 0.50, 0.035),
+                color=post_color,
+            )
+        )
+        add(
+            ColorCube(
+                app,
+                pos=(x, height + 0.045, z),
+                rot=(0, yaw, 0),
+                scale=(0.105, 0.055, 0.105),
+                color=lamp_color,
+            )
+        )
+        add(
+            NightGlow(
+                app,
+                pos=(x, height + 0.080, z + 0.012),
+                rot=(0, 0, 0),
+                scale=(glow_scale, glow_scale, 1.0),
+                color=lamp_color,
+                alpha=glow_alpha,
+            )
+        )
 
-        for i, angle_deg in enumerate((18, 48, 78, 118, 148, 178, 208, 238, 268, 298, 328, 352)):
-            angle = math.radians(angle_deg)
-            radius = 8.90
-            x = math.cos(angle) * radius
-            z = math.sin(angle) * radius
+    def add_night_lights(self, app):
+        road_lamps = [
+            (0.68, 11.2, 6),
+            (12.7, 0.56, 90),
+            (-12.8, -0.54, -90),
+            (-0.78, -12.9, 178),
+            (4.95, 7.35, 32),
+        ]
+        for i, (x, z, yaw) in enumerate(road_lamps):
+            self.add_lantern_post(
+                app,
+                (x, z),
+                yaw=yaw,
+                height=0.80,
+                glow_scale=0.38,
+                glow_alpha=0.48 if i % 2 else 0.56,
+                lamp_color=(1.00, 0.68, 0.34),
+            )
+
+        self.add_sakura_hanging_lanterns(app)
+
+    def add_sakura_hanging_lanterns(self, app):
+        add = self.add_object
+        lantern_specs = [
+            (-0.78, 2.04, 0.18, -12, 0.34),
+            (0.66, 2.15, -0.28, 16, 0.31),
+            (-0.24, 2.28, -0.82, 8, 0.28),
+            (0.32, 1.86, 0.92, -18, 0.26),
+            (1.02, 1.92, 0.42, 22, 0.24),
+        ]
+
+        for i, (x, y, z, yaw, glow_scale) in enumerate(lantern_specs):
+            cord_height = 0.34 + 0.04 * (i % 2)
             add(
                 ColorCube(
                     app,
-                    pos=(x, 0.44, z),
-                    scale=(0.035, 0.42, 0.035),
-                    color=post_color,
+                    pos=(x, y + cord_height * 0.50, z),
+                    rot=(0, yaw, 0),
+                    scale=(0.010, cord_height * 0.50, 0.010),
+                    color=(0.16, 0.10, 0.07),
                 )
             )
             add(
                 ColorCube(
                     app,
-                    pos=(x, 0.90, z),
-                    rot=(0, angle_deg, 0),
-                    scale=(0.10, 0.055, 0.10),
-                    color=(0.95, 0.72, 0.36),
+                    pos=(x, y, z),
+                    rot=(0, yaw, 0),
+                    scale=(0.115, 0.145, 0.095),
+                    color=(0.94, 0.34, 0.16),
+                )
+            )
+            add(
+                ColorCube(
+                    app,
+                    pos=(x, y + 0.15, z),
+                    rot=(0, yaw, 0),
+                    scale=(0.135, 0.025, 0.110),
+                    color=(0.28, 0.12, 0.08),
                 )
             )
             add(
                 NightGlow(
                     app,
-                    pos=(x, 0.94, z + 0.012),
-                    rot=(0, 0, 0),
-                    scale=(0.36, 0.36, 1.0),
-                    color=warm,
-                    alpha=0.48 if i % 2 else 0.58,
-                )
-            )
-
-        for i, angle_deg in enumerate((52, 136, 224, 312)):
-            angle = math.radians(angle_deg)
-            x = math.cos(angle) * 6.2
-            z = math.sin(angle) * 6.2
-            add(
-                NightGlow(
-                    app,
-                    pos=(x, 0.12, z),
-                    rot=(90, 0, 0),
-                    scale=(0.74, 0.74, 1.0),
-                    color=(1.00, 0.58, 0.28),
-                    alpha=0.18,
-                    pulse=0.04,
+                    pos=(x, y + 0.02, z + 0.016),
+                    rot=(0, yaw, 0),
+                    scale=(glow_scale, glow_scale, 1.0),
+                    color=(1.00, 0.58, 0.26),
+                    alpha=0.44 + 0.04 * (i % 2),
+                    pulse=0.05,
                 )
             )
 
@@ -1463,6 +1524,55 @@ class Scene:
                 )
             )
 
+    def add_summer_fireflies(self, app, pond_radius_scale):
+        if self.season_value("seasonal_effect", "") != "summer":
+            return
+
+        add = self.add_object
+        firefly_color = (1.00, 0.96, 0.42)
+
+        for i in range(34):
+            angle = math.radians(i * 137.5)
+            radius = 0.62 + (i % 9) * 0.18
+            center = (
+                math.cos(angle) * radius,
+                0.82 + (i % 7) * 0.17,
+                math.sin(angle) * radius,
+            )
+            add(
+                FireflyGlow(
+                    app,
+                    center=center,
+                    orbit=(0.18 + (i % 4) * 0.035, 0.12 + (i % 5) * 0.018, 0.20 + (i % 3) * 0.040),
+                    scale=(0.028, 0.028, 1.0),
+                    color=firefly_color,
+                    alpha=0.66,
+                    speed=0.13 + (i % 6) * 0.018,
+                    phase=(i * 0.079) % 1.0,
+                )
+            )
+
+        for i in range(40):
+            angle = math.radians(i * 31.0 + 8.0 * math.sin(i))
+            radius = (3.45 + (i % 10) * 0.19 + 0.18 * math.sin(i * 1.3)) * pond_radius_scale
+            center = (
+                math.cos(angle) * radius,
+                0.40 + (i % 6) * 0.13,
+                math.sin(angle) * radius,
+            )
+            add(
+                FireflyGlow(
+                    app,
+                    center=center,
+                    orbit=(0.28 + (i % 5) * 0.045, 0.11 + (i % 4) * 0.025, 0.28 + (i % 6) * 0.036),
+                    scale=(0.023, 0.023, 1.0),
+                    color=firefly_color,
+                    alpha=0.56,
+                    speed=0.10 + (i % 7) * 0.016,
+                    phase=(i * 0.061 + 0.21) % 1.0,
+                )
+            )
+
     def add_seasonal_effects(self, app, pond_radius_scale):
         add = self.add_object
         effect = self.season_value("seasonal_effect", "spring")
@@ -1563,6 +1673,7 @@ class Scene:
                     scale=1.22,
                     spin=angle,
                 )
+            self.add_summer_fireflies(app, pond_radius_scale)
 
         else:
             for i in range(26):
@@ -2990,6 +3101,34 @@ class Scene:
                 yaw=lantern_angle,
             )
 
+    def add_house_porch_light(self, app, base_x, base_z, yaw, width, height, depth, variant):
+        add = self.add_object
+        front_z = depth + depth * (0.70 if variant in ("cottage", "wide_veranda") else 0.58)
+        lamp_y = 0.55 + height * 0.42
+        fixture_x, fixture_z = self.local_house_pos(base_x, base_z, yaw, -width * 0.24, front_z)
+        glow_x, glow_z = self.local_house_pos(base_x, base_z, yaw, 0.0, front_z + depth * 0.16)
+
+        add(
+            ColorCube(
+                app,
+                pos=(fixture_x, lamp_y, fixture_z),
+                rot=(0, yaw, 0),
+                scale=(width * 0.040, height * 0.040, depth * 0.030),
+                color=(1.00, 0.66, 0.34),
+            )
+        )
+        add(
+            NightGlow(
+                app,
+                pos=(glow_x, lamp_y, glow_z),
+                rot=(0, yaw, 0),
+                scale=(0.30 + width * 0.10, 0.30 + height * 0.11, 1.0),
+                color=(1.00, 0.62, 0.32),
+                alpha=0.34 if variant in ("cottage", "wide_veranda") else 0.28,
+                pulse=0.035,
+            )
+        )
+
     def add_settlement(self, app, pond_radius_scale):
         add = self.add_object
         road_radius = 8.55
@@ -3061,7 +3200,7 @@ class Scene:
             front_x = -radial_x
             front_z = -radial_z
             yaw = math.degrees(math.atan2(front_x, front_z)) + yaw_offset
-            width, _, depth = body_scale
+            width, height, depth = body_scale
 
             road_start = (
                 radial_x * (road_radius + road_width * 0.58),
@@ -3098,6 +3237,7 @@ class Scene:
                 has_chimney=idx % 3 != 1,
                 variant=variant,
             )
+            self.add_house_porch_light(app, x, z, yaw, width, height, depth, variant)
 
     def add_bridge(self, app):
         add = self.add_object
