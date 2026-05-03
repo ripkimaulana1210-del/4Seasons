@@ -29,6 +29,7 @@ SKY_DEFAULTS = {
     "cloud_density": 0.56,
     "star_color": (0.96, 0.94, 0.86),
     "night_fog_color": (0.08, 0.11, 0.17),
+    "fog_density_bonus": 0.0,
 }
 
 
@@ -76,6 +77,8 @@ class SeasonController:
         self.transition_to = None
         self.temperature_c = self.calculate_temperature()
         self.caption_timer = 0.0
+        self._atmosphere_cache_key = None
+        self._atmosphere_cache = None
 
     @property
     def current(self):
@@ -192,6 +195,27 @@ class SeasonController:
         }
 
     def atmosphere_state(self):
+        transition_key = None
+        if self.is_transitioning:
+            transition_key = (
+                self.transition_from["id"],
+                self.transition_to["id"],
+                self.transition_elapsed,
+            )
+
+        cache_key = (
+            self.current_index,
+            self.day_time,
+            transition_key,
+        )
+        if cache_key == self._atmosphere_cache_key:
+            return self._atmosphere_cache
+
+        self._atmosphere_cache = self._calculate_atmosphere_state()
+        self._atmosphere_cache_key = cache_key
+        return self._atmosphere_cache
+
+    def _calculate_atmosphere_state(self):
         day = self.day_state()
         night = day["night"]
         dusk = day["dusk"]
@@ -205,7 +229,10 @@ class SeasonController:
         night_horizon = self.blended_season_setting("sky_night_horizon")
         cloud_color = self.blended_season_setting("cloud_color")
         cloud_density = self.blended_season_setting("cloud_density")
+        fog_bonus = self.blended_season_setting("fog_density_bonus")
         summer_clarity = self.seasonal_effect_visibility("summer") * (1.0 - cloud_density * 0.20)
+        winter = self.seasonal_effect_visibility("winter")
+        autumn = self.seasonal_effect_visibility("autumn")
 
         top = blend_color(day_top, dusk_top, dusk)
         horizon = blend_color(day_horizon, dusk_horizon, dusk)
@@ -247,6 +274,17 @@ class SeasonController:
                 self.transition_snapshot()["eased"],
             )
         light_intensity = max(0.30, base_intensity * (0.36 + daylight * 0.82) + dusk * 0.12)
+        fog_density = max(
+            0.015,
+            0.08 + cloud_density * 0.10 + night * 0.08 + winter * 0.17 + autumn * 0.08 + fog_bonus,
+        )
+        fog_start = lerp(22.0, 12.0, min(1.0, winter + night * 0.45))
+        fog_end = lerp(64.0, 42.0, min(1.0, winter + cloud_density * 0.35))
+        fog_color = blend_color(
+            blend_color(horizon, self.blended_season_setting("night_fog_color"), night * 0.55),
+            self.current.get("winter_snow_shadow_color", (0.78, 0.86, 0.92)),
+            winter * 0.35,
+        )
 
         return {
             **day,
@@ -272,6 +310,10 @@ class SeasonController:
             "cloud_alpha": cloud_density * (0.28 + daylight * 0.48 + night * 0.22),
             "night_fog_color": self.blended_season_setting("night_fog_color"),
             "aurora_alpha": night * self.current.get("aurora_intensity", 0.0),
+            "fog_color": fog_color,
+            "fog_density": fog_density,
+            "fog_start": fog_start,
+            "fog_end": fog_end,
         }
 
     def apply_atmosphere(self):
@@ -359,6 +401,8 @@ class SeasonController:
             self.previous_season()
         elif key == pg.K_m:
             self.app.audio.toggle_mute(self.current)
+            if hasattr(self.app, "settings"):
+                self.app.settings.set("audio_muted", self.app.audio.muted)
             self.update_caption(force=True)
         elif key in (pg.K_EQUALS, pg.K_PLUS, pg.K_KP_PLUS):
             self.change_speed(0.75)
@@ -435,6 +479,8 @@ class SeasonController:
             f"Time-lapse {mode} ({self.season_duration:0.1f}s/musim)"
             f" | {period} {clock_hour:02d}:{clock_minute:02d} Day-cycle {day_mode}"
             f"{transition} | "
-            "1-4 musim, T auto musim, Y auto hari, L malam, O pagi, N/P geser, M mute, +/- speed"
+            "1-4 musim, T auto musim, Y auto hari, L malam, O pagi, N/P geser, "
+            "M mute, +/- speed, F1 kamera musim, F2 screenshot, F5-F8 kamera, F9 quality, "
+            "C cinematic, F11 fullscreen, Esc pause"
         )
         pg.display.set_caption(caption)

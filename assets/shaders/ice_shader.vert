@@ -7,12 +7,14 @@ in vec2 in_uv;
 uniform mat4 m_proj;
 uniform mat4 m_view;
 uniform mat4 m_model;
+uniform mat4 m_light_space;
 uniform float u_time;
 
 out vec3 v_world_pos;
 out vec3 v_normal;
 out vec2 v_uv;
 out float v_crystal;
+out vec4 v_shadow_pos;
 
 void main() {
     vec3 pos = in_position;
@@ -24,6 +26,7 @@ void main() {
     v_normal = normalize(mat3(transpose(inverse(m_model))) * in_normal);
     v_uv = in_uv;
     v_crystal = crystal;
+    v_shadow_pos = m_light_space * world_pos;
 
     gl_Position = m_proj * m_view * world_pos;
 }

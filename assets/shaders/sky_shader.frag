@@ -6,6 +6,8 @@ uniform vec3 u_horizon_color;
 uniform vec3 u_star_color;
 uniform float u_star_intensity;
 uniform float u_summer_sky_clarity;
+uniform float u_season_index;
+uniform float u_sky_detail_strength;
 uniform float u_dusk;
 uniform float u_night;
 uniform float u_time;
@@ -139,6 +141,47 @@ vec3 summer_galaxy(vec3 dir, vec2 uv) {
     return (blue_haze + pale_core) * (1.0 - dust * 0.36) * sky_mask;
 }
 
+float season_mask(float target) {
+    return 1.0 - smoothstep(0.20, 0.76, abs(u_season_index - target));
+}
+
+vec3 spring_rainbow(vec2 uv, float h) {
+    vec2 center = vec2(0.55, -0.04);
+    vec2 d = vec2((uv.x - center.x) * 1.78, uv.y - center.y);
+    float radius = length(d);
+    float arc = 1.0 - smoothstep(0.010, 0.034, abs(radius - 0.56));
+    arc *= smoothstep(0.08, 0.32, h) * (1.0 - smoothstep(0.46, 0.72, h));
+
+    float band = clamp((radius - 0.535) / 0.050, 0.0, 1.0);
+    vec3 red = vec3(1.00, 0.34, 0.28);
+    vec3 yellow = vec3(1.00, 0.88, 0.34);
+    vec3 green = vec3(0.34, 0.86, 0.52);
+    vec3 blue = vec3(0.36, 0.66, 1.00);
+    vec3 color = mix(red, yellow, smoothstep(0.00, 0.33, band));
+    color = mix(color, green, smoothstep(0.25, 0.64, band));
+    color = mix(color, blue, smoothstep(0.58, 1.00, band));
+    return color * arc * (0.30 + u_dusk * 0.20) * (1.0 - u_night);
+}
+
+vec3 autumn_cloud_detail(vec2 uv, float h) {
+    float band = exp(-pow((h - 0.46) * 4.2, 2.0));
+    float n1 = hash(floor((uv + vec2(u_time * 0.004, 0.0)) * vec2(26.0, 9.0)));
+    float n2 = hash(floor((uv + vec2(0.13, u_time * 0.003)) * vec2(48.0, 15.0)));
+    float mottled = smoothstep(0.34, 0.82, mix(n1, n2, 0.42));
+    vec3 cloud = mix(vec3(0.14, 0.10, 0.08), vec3(0.45, 0.30, 0.18), mottled);
+    return cloud * band * (0.16 + u_dusk * 0.20) * (1.0 - u_night * 0.38);
+}
+
+vec3 winter_aurora_detail(vec2 uv, float h) {
+    float ribbon_a = exp(-pow((h - (0.62 + 0.055 * sin(uv.x * 10.0 + u_time * 0.35))) * 18.0, 2.0));
+    float ribbon_b = exp(-pow((h - (0.76 + 0.040 * sin(uv.x * 14.0 - u_time * 0.42))) * 24.0, 2.0));
+    float curtain = smoothstep(0.10, 0.55, h) * smoothstep(0.98, 0.58, h);
+    float shimmer = 0.72 + 0.28 * sin(u_time * 1.7 + uv.x * 31.0);
+    vec3 green = vec3(0.28, 1.00, 0.72);
+    vec3 blue = vec3(0.30, 0.60, 1.00);
+    return (green * ribbon_a + blue * ribbon_b * 0.74) * curtain * shimmer * u_night * 0.26;
+}
+
 float star_layer(vec2 uv, vec2 density, float threshold, float base_size, float brightness, float twinkle_speed) {
     vec2 grid = uv * density;
     vec2 id = floor(grid);
@@ -192,12 +235,22 @@ void main() {
     float stars = clamp(star_field(dir) * u_star_intensity, 0.0, 1.35);
     color += u_star_color * stars * (0.72 + u_night * 0.35);
 
+    float spring = season_mask(0.0);
+    float summer = season_mask(1.0);
+    float autumn = season_mask(2.0);
+    float winter = season_mask(3.0);
+    float detail = u_sky_detail_strength;
+
+    color += spring_rainbow(uv, h) * spring * detail;
+
     float summer_night = u_summer_sky_clarity * smoothstep(0.42, 0.92, u_night) * (1.0 - u_dusk * 0.54);
-    color += summer_galaxy(dir, uv) * summer_night * 0.62;
-    color += summer_planets(uv) * summer_night * smoothstep(0.05, 0.28, dir.y) * 0.48;
+    color += summer_galaxy(dir, uv) * summer_night * 0.62 * detail * (0.55 + summer * 0.45);
+    color += summer_planets(uv) * summer_night * smoothstep(0.05, 0.28, dir.y) * 0.48 * detail;
 
     float constellations = constellation_field(uv) * summer_night * smoothstep(0.12, 0.38, dir.y);
     color += vec3(0.62, 0.76, 1.00) * constellations * 0.30;
+    color = mix(color, color + autumn_cloud_detail(uv, h) * detail, autumn * 0.75);
+    color += winter_aurora_detail(uv, h) * winter * detail;
 
     float vignette = smoothstep(-0.08, 0.28, v_dir.y);
     color *= mix(0.82, 1.0, vignette);

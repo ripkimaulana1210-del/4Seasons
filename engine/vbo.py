@@ -407,7 +407,7 @@ class FujiPeakVBO(BaseVBO):
     attribs = ["in_normal", "in_position"]
 
     def get_vertex_data(self):
-        return generate_fuji_peak_data(radius=1.0, height=1.0, rings=16, sectors=88)
+        return generate_fuji_peak_data(radius=1.0, height=1.0)
 
 
 class FujiSnowcapVBO(BaseVBO):
@@ -415,4 +415,4 @@ class FujiSnowcapVBO(BaseVBO):
     attribs = ["in_normal", "in_position"]
 
     def get_vertex_data(self):
-        return generate_fuji_snowcap_data(radius=1.0, height=1.0, rings=7, sectors=88)
+        return generate_fuji_snowcap_data(radius=1.0, height=1.0)

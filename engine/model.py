@@ -38,6 +38,34 @@ def _set_uniform_value(program, name, value):
         return
 
 
+def _write_fog_uniforms(program, app):
+    if not hasattr(app, "season_controller"):
+        return
+
+    atmosphere = app.season_controller.atmosphere_state()
+    _set_uniform_value(program, "u_fog_density", atmosphere["fog_density"])
+    _set_uniform_value(program, "u_fog_start", atmosphere["fog_start"])
+    _set_uniform_value(program, "u_fog_end", atmosphere["fog_end"])
+    try:
+        program["u_fog_color"].write(glm.vec3(atmosphere["fog_color"]))
+    except KeyError:
+        return
+
+
+def _write_shadow_uniforms(program, app):
+    shadow = getattr(app, "shadow_renderer", None)
+    if shadow is None:
+        return
+
+    shadow.bind(location=1)
+    _set_uniform_value(program, "u_shadow_map", 1)
+    _set_uniform_value(program, "u_shadow_strength", shadow.strength if shadow.enabled else 0.0)
+    try:
+        program["m_light_space"].write(shadow.light_space)
+    except KeyError:
+        return
+
+
 class BaseModelColor:
     def __init__(
         self,
@@ -91,6 +119,8 @@ class BaseModelColor:
         self.program["m_model"].write(self.m_model)
         self.program["cam_pos"].write(self.camera.position)
         self.program["u_color"].write(self.color)
+        _write_fog_uniforms(self.program, self.app)
+        _write_shadow_uniforms(self.program, self.app)
         _set_uniform_value(self.program, "u_time", self.app.time)
         if hasattr(self.app, "season_controller"):
             atmosphere = self.app.season_controller.atmosphere_state()
@@ -169,6 +199,19 @@ class SunDisc(BaseModelEmissive):
         super().__init__(app, vao_name, pos, rot, scale, color, alpha)
 
 
+class ContactShadow(SunDisc):
+    def __init__(
+        self,
+        app,
+        pos=(0, 0.024, 0),
+        rot=(90, 0, 0),
+        scale=(1.0, 0.38, 1.0),
+        color=(0.015, 0.018, 0.018),
+        alpha=0.22,
+    ):
+        super().__init__(app, pos=pos, rot=rot, scale=scale, color=color, alpha=alpha)
+
+
 class AtmosphereSunDisc(SunDisc):
     def __init__(
         self,
@@ -222,6 +265,7 @@ class NightGlow(SunDisc):
     def update(self):
         atmosphere = self.app.season_controller.atmosphere_state()
         glow = max(atmosphere["night"], atmosphere["dusk"] * 0.62)
+        glow *= self.app.season_controller.current.get("lantern_glow_boost", 1.0)
         flicker = 1.0 + self.pulse * math.sin(self.app.time * 4.2 + self.pos.x * 0.7 + self.pos.z * 0.3)
         self.alpha = self.base_alpha * glow * flicker
         self.color = self.base_color
@@ -349,6 +393,8 @@ class BaseModelTexture:
         self.program["u_tint"].write(self.tint)
         self.program["u_repeat"].write(self.repeat)
         self.program["u_alpha"].value = self.alpha
+        _write_fog_uniforms(self.program, self.app)
+        _write_shadow_uniforms(self.program, self.app)
 
     def render(self):
         self.update()
@@ -561,6 +607,9 @@ class SkyDome:
 
     def update(self):
         atmosphere = self.app.season_controller.atmosphere_state()
+        season = self.app.season_controller.current
+        effect = season.get("seasonal_effect", "spring")
+        effect_index = {"spring": 0.0, "summer": 1.0, "autumn": 2.0, "winter": 3.0}.get(effect, 0.0)
         self.m_model = glm.translate(glm.mat4(), self.camera.position)
         self.m_model = glm.scale(self.m_model, glm.vec3(self.scale, self.scale, self.scale))
         self.program["m_view"].write(self.camera.m_view)
@@ -571,6 +620,8 @@ class SkyDome:
         self.program["u_star_color"].write(glm.vec3(atmosphere["star_color"]))
         self.program["u_star_intensity"].value = atmosphere["star_intensity"]
         self.program["u_summer_sky_clarity"].value = atmosphere["summer_sky_clarity"]
+        self.program["u_season_index"].value = effect_index
+        self.program["u_sky_detail_strength"].value = season.get("sky_detail_strength", 1.0)
         self.program["u_dusk"].value = atmosphere["dusk"]
         self.program["u_night"].value = atmosphere["night"]
         self.program["u_time"].value = self.app.time
@@ -675,6 +726,51 @@ class RainDrop(ColorCube):
         super().update()
 
 
+class DriftParticle(ColorCube):
+    def __init__(
+        self,
+        app,
+        vao_name="color_cube",
+        pos=(0, 4, 0),
+        rot=(0, 0, 0),
+        scale=(0.035, 0.006, 0.020),
+        color=(1.0, 0.72, 0.88),
+        fall_distance=4.0,
+        drift=(1.0, 0.0, -0.45),
+        speed=0.09,
+        phase=0.0,
+        spin_speed=90.0,
+        sway=0.22,
+    ):
+        self.base_pos = glm.vec3(pos)
+        self.base_rot = glm.vec3([glm.radians(a) for a in rot])
+        self.fall_distance = fall_distance
+        self.drift = glm.vec3(drift)
+        self.speed = speed
+        self.phase = phase
+        self.spin_speed = glm.radians(spin_speed)
+        self.sway = sway
+        super().__init__(app, vao_name, pos, rot, scale, color)
+
+    def update(self):
+        speed_boost = self.app.season_controller.current.get("particle_speed_boost", 1.0)
+        progress = (self.app.time * self.speed * speed_boost + self.phase) % 1.0
+        wave = math.sin((progress + self.phase) * math.tau)
+        cross = math.cos((progress * 1.7 + self.phase) * math.tau)
+        self.pos = glm.vec3(
+            self.base_pos.x + self.drift.x * (progress - 0.5) + self.sway * 0.18 * cross,
+            self.base_pos.y - self.fall_distance * progress + self.sway * 0.08 * wave,
+            self.base_pos.z + self.drift.z * (progress - 0.5) + self.sway * 0.12 * wave,
+        )
+        self.rot = glm.vec3(
+            self.base_rot.x + wave * 0.20,
+            self.base_rot.y + self.spin_speed * progress,
+            self.base_rot.z + cross * 0.30,
+        )
+        self.m_model = self.get_model_matrix()
+        super().update()
+
+
 class WindStreak(ColorCube):
     def __init__(
         self,
@@ -697,12 +793,13 @@ class WindStreak(ColorCube):
         super().__init__(app, vao_name, pos, rot, scale, color)
 
     def update(self):
-        progress = (self.app.time * self.speed + self.phase) % 1.0
+        boost = self.app.season_controller.current.get("wind_motion_boost", 1.0)
+        progress = (self.app.time * self.speed * boost + self.phase) % 1.0
         wave = math.sin((progress + self.phase) * math.tau)
         self.pos = glm.vec3(
-            self.base_pos.x + self.travel.x * (progress - 0.5),
-            self.base_pos.y + self.bob * wave,
-            self.base_pos.z + self.travel.z * (progress - 0.5),
+            self.base_pos.x + self.travel.x * boost * (progress - 0.5),
+            self.base_pos.y + self.bob * boost * wave,
+            self.base_pos.z + self.travel.z * boost * (progress - 0.5),
         )
         self.m_model = self.get_model_matrix()
         super().update()
@@ -800,7 +897,15 @@ class WaterSurface(BaseModelColor):
 
     def update(self):
         super().update()
+        season = self.app.season_controller.current
+        effect = season.get("seasonal_effect", "spring")
+        effect_index = {"spring": 0.0, "summer": 1.0, "autumn": 2.0, "winter": 3.0}.get(effect, 0.0)
         self.program["u_time"].value = self.app.time
+        self.program["u_water_mode"].value = effect_index
+        self.program["u_wave_strength"].value = season.get("water_wave_strength", 1.0)
+        self.program["u_sparkle_strength"].value = season.get("water_sparkle_strength", 0.5)
+        self.program["u_season_mix"].value = season.get("water_season_mix", 0.5)
+        self.program["u_accent_color"].write(glm.vec3(season.get("water_accent_color", (0.72, 0.90, 1.0))))
 
 
 class IceSurface(BaseModelColor):
@@ -891,6 +996,7 @@ class FujiPeak(BaseModelColor):
         scale=(1, 1, 1),
         color=(0.44, 0.50, 0.60),
     ):
+        self.is_background = True
         super().__init__(app, vao_name, pos, rot, scale, color)
 
 
@@ -904,6 +1010,7 @@ class FujiSnowcap(BaseModelColor):
         scale=(1, 1, 1),
         color=(0.96, 0.97, 1.00),
     ):
+        self.is_background = True
         super().__init__(app, vao_name, pos, rot, scale, color)
 
 

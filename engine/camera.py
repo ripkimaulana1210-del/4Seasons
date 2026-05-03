@@ -1,5 +1,9 @@
+import math
+
 from pyglm import glm
 import pygame as pg
+
+from .data.scene_config import CAMERA_PRESETS
 
 FOV = 62
 NEAR = 0.1
@@ -24,6 +28,9 @@ class Camera:
         self.use_orbit = False
         self.orbit_target = glm.vec3(0, 0.8, 0)
         self.orbit_radius = 10.0
+        self.cinematic_enabled = False
+        self.cinematic_duration = 22.0
+        self.preset_name = "free"
 
         self.m_proj = self.get_projection_matrix()
         self.update_camera_vectors()
@@ -45,6 +52,14 @@ class Camera:
         self.forward = glm.normalize(self.forward)
         self.right = glm.normalize(glm.cross(self.forward, self.world_up))
         self.up = glm.normalize(glm.cross(self.right, self.forward))
+
+    def look_at(self, target):
+        target = glm.vec3(target)
+        direction = glm.normalize(target - self.position)
+        self.look_lr = math.degrees(math.atan2(direction.z, direction.x))
+        self.look_ud = math.degrees(math.asin(max(-1.0, min(1.0, direction.y))))
+        self.update_camera_vectors()
+        self.m_view = self.get_view_matrix()
 
     def move(self):
         keys = pg.key.get_pressed()
@@ -102,6 +117,10 @@ class Camera:
         self.m_view = self.get_view_matrix()
 
     def update(self):
+        if self.cinematic_enabled:
+            self.update_cinematic()
+            return
+
         if self.use_orbit:
             self.update_orbit()
         else:
@@ -111,6 +130,8 @@ class Camera:
             self.m_view = self.get_view_matrix()
 
     def set_default(self):
+        self.cinematic_enabled = False
+        self.preset_name = "orbit" if self.use_orbit else "free"
         self.position = glm.vec3(0.0, 2.35, 15.6)
         self.orbit_target = glm.vec3(0, 2.7, 0)
         self.orbit_radius = 14.2
@@ -121,6 +142,58 @@ class Camera:
             self.look_lr = 270.0
             self.look_ud = 4.4
         self.update_camera_vectors()
+        self.m_view = self.get_view_matrix()
+
+    def set_preset(self, name):
+        preset = CAMERA_PRESETS.get(name)
+        if preset is None:
+            return
+
+        self.cinematic_enabled = False
+        self.use_orbit = False
+        self.preset_name = name
+        self.position = glm.vec3(preset["position"])
+        self.look_at(preset["target"])
+        pg.mouse.get_rel()
+
+    def toggle_cinematic(self):
+        self.cinematic_enabled = not self.cinematic_enabled
+        self.use_orbit = False
+        self.preset_name = "cinematic" if self.cinematic_enabled else "free"
+        pg.mouse.get_rel()
+
+    def set_season_preset(self):
+        name = self.app.season_controller.current.get("camera_preset")
+        if name:
+            self.set_preset(name)
+
+    def cinematic_route(self):
+        return self.app.season_controller.current.get(
+            "cinematic_route",
+            ("sakura", "bridge", "village", "fuji"),
+        )
+
+    def cinematic_point(self, index):
+        names = self.cinematic_route()
+        preset = CAMERA_PRESETS[names[index % len(names)]]
+        return glm.vec3(preset["position"]), glm.vec3(preset["target"])
+
+    def update_cinematic(self):
+        segment_count = len(self.cinematic_route())
+        progress = (self.app.time / self.cinematic_duration) % 1.0
+        segment = min(segment_count - 1, int(progress * segment_count))
+        local_t = progress * segment_count - segment
+        eased = local_t * local_t * (3.0 - 2.0 * local_t)
+
+        start_pos, start_target = self.cinematic_point(segment)
+        end_pos, end_target = self.cinematic_point(segment + 1)
+        self.position = start_pos * (1.0 - eased) + end_pos * eased
+        target = start_target * (1.0 - eased) + end_target * eased
+        self.look_at(target)
+
+    def resize(self, win_size):
+        self.aspect_ratio = win_size[0] / win_size[1]
+        self.m_proj = self.get_projection_matrix()
         self.m_view = self.get_view_matrix()
 
     def get_view_matrix(self):

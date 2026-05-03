@@ -414,117 +414,39 @@ def _fuji_surface_point(radius, angle, max_radius=1.0, peak_height=1.0, lift=0.0
 
 def generate_fuji_peak_data(radius=1.0, height=1.0, rings=16, sectors=88):
     data = []
-    points = []
+    z = 0.0
+    points = [
+        np.array([-radius * 1.18, 0.00, z], dtype=np.float32),
+        np.array([-radius * 0.84, height * 0.22, z], dtype=np.float32),
+        np.array([-radius * 0.52, height * 0.50, z], dtype=np.float32),
+        np.array([-radius * 0.22, height * 0.78, z], dtype=np.float32),
+        np.array([0.00, height, z], dtype=np.float32),
+        np.array([radius * 0.26, height * 0.76, z], dtype=np.float32),
+        np.array([radius * 0.56, height * 0.46, z], dtype=np.float32),
+        np.array([radius * 0.88, height * 0.20, z], dtype=np.float32),
+        np.array([radius * 1.20, 0.00, z], dtype=np.float32),
+    ]
+    base = np.array([0.0, 0.0, z], dtype=np.float32)
 
-    for r in range(rings + 1):
-        ring_radius = radius * r / rings
-        ring = []
-        for s in range(sectors):
-            angle = 2.0 * math.pi * s / sectors
-            ring.append(_fuji_surface_point(ring_radius, angle, max_radius=radius, peak_height=height))
-        points.append(ring)
-
-    center = _fuji_surface_point(0.0, 0.0, max_radius=radius, peak_height=height)
-
-    for s in range(sectors):
-        nxt = (s + 1) % sectors
-        p1 = points[1][s]
-        p2 = points[1][nxt]
-        normal = _normalize(np.cross(p1 - center, p2 - center))
-        if normal[1] < 0.0:
-            normal = -normal
-        _push_vertex(data, normal, center)
-        _push_vertex(data, normal, p1)
-        _push_vertex(data, normal, p2)
-
-    for r in range(1, rings):
-        for s in range(sectors):
-            nxt = (s + 1) % sectors
-            p0 = points[r][s]
-            p1 = points[r + 1][s]
-            p2 = points[r + 1][nxt]
-            p3 = points[r][nxt]
-
-            normal_a = _normalize(np.cross(p1 - p0, p2 - p0))
-            normal_b = _normalize(np.cross(p2 - p0, p3 - p0))
-            if normal_a[1] < 0.0:
-                normal_a = -normal_a
-            if normal_b[1] < 0.0:
-                normal_b = -normal_b
-
-            _push_vertex(data, normal_a, p0)
-            _push_vertex(data, normal_a, p1)
-            _push_vertex(data, normal_a, p2)
-
-            _push_vertex(data, normal_b, p0)
-            _push_vertex(data, normal_b, p2)
-            _push_vertex(data, normal_b, p3)
+    for left, right in zip(points, points[1:]):
+        _push_double_sided_tri(data, base, left, right)
 
     return np.array(data, dtype=np.float32)
 
 
 def generate_fuji_snowcap_data(radius=1.0, height=1.0, rings=7, sectors=88):
     data = []
-    points = []
+    z = 0.004
+    peak = np.array([0.00, height * 1.01, z], dtype=np.float32)
+    left = np.array([-radius * 0.34, height * 0.66, z], dtype=np.float32)
+    mid_left = np.array([-radius * 0.14, height * 0.70, z], dtype=np.float32)
+    center = np.array([0.00, height * 0.58, z], dtype=np.float32)
+    mid_right = np.array([radius * 0.16, height * 0.69, z], dtype=np.float32)
+    right = np.array([radius * 0.38, height * 0.64, z], dtype=np.float32)
 
-    for r in range(rings + 1):
-        t = r / rings
-        ring = []
-        for s in range(sectors):
-            angle = 2.0 * math.pi * s / sectors
-            snowline = radius * (
-                0.34
-                + 0.035 * math.sin(angle * 3.0)
-                + 0.020 * math.cos(angle * 5.0)
-            )
-            snowline = max(radius * 0.24, min(radius * 0.42, snowline))
-            ring_radius = snowline * t
-            point = _fuji_surface_point(
-                ring_radius,
-                angle,
-                max_radius=radius,
-                peak_height=height,
-                lift=0.018,
-            )
-            if t > 0.72:
-                point[1] += 0.010 * math.sin(angle * 6.0 + t * math.pi)
-            ring.append(point)
-        points.append(ring)
-
-    center = _fuji_surface_point(0.0, 0.0, max_radius=radius, peak_height=height, lift=0.018)
-
-    for s in range(sectors):
-        nxt = (s + 1) % sectors
-        p1 = points[1][s]
-        p2 = points[1][nxt]
-        normal = _normalize(np.cross(p1 - center, p2 - center))
-        if normal[1] < 0.0:
-            normal = -normal
-        _push_vertex(data, normal, center)
-        _push_vertex(data, normal, p1)
-        _push_vertex(data, normal, p2)
-
-    for r in range(1, rings):
-        for s in range(sectors):
-            nxt = (s + 1) % sectors
-            p0 = points[r][s]
-            p1 = points[r + 1][s]
-            p2 = points[r + 1][nxt]
-            p3 = points[r][nxt]
-
-            normal_a = _normalize(np.cross(p1 - p0, p2 - p0))
-            normal_b = _normalize(np.cross(p2 - p0, p3 - p0))
-            if normal_a[1] < 0.0:
-                normal_a = -normal_a
-            if normal_b[1] < 0.0:
-                normal_b = -normal_b
-
-            _push_vertex(data, normal_a, p0)
-            _push_vertex(data, normal_a, p1)
-            _push_vertex(data, normal_a, p2)
-
-            _push_vertex(data, normal_b, p0)
-            _push_vertex(data, normal_b, p2)
-            _push_vertex(data, normal_b, p3)
+    _push_double_sided_tri(data, peak, left, mid_left)
+    _push_double_sided_tri(data, peak, mid_left, center)
+    _push_double_sided_tri(data, peak, center, mid_right)
+    _push_double_sided_tri(data, peak, mid_right, right)
 
     return np.array(data, dtype=np.float32)
