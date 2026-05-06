@@ -1,3 +1,5 @@
+import math
+
 import pygame as pg
 import moderngl as mgl
 import numpy as np
@@ -15,6 +17,7 @@ class HUD:
         self.last_refresh = -999.0
         self.texture = None
         self.pause_texture = None
+        self.startup_texture = None
 
         self.font = pg.font.Font(None, 19)
         self.small_font = pg.font.Font(None, 17)
@@ -30,7 +33,13 @@ class HUD:
             self.program,
             [(self.pause_vbo, "2f 2f", "in_position", "in_uv")],
         )
+        self.startup_vbo = self.ctx.buffer(self.fullscreen_vertices().astype("f4").tobytes())
+        self.startup_vao = self.ctx.vertex_array(
+            self.program,
+            [(self.startup_vbo, "2f 2f", "in_position", "in_uv")],
+        )
         self.program["u_texture"].value = 0
+        self.program["u_alpha"].value = 1.0
 
     def load_program(self):
         vertex_path = SHADER_DIR / "hud_shader.vert"
@@ -76,6 +85,19 @@ class HUD:
                 (left, top, 0.0, 1.0),
                 (right, bottom, 1.0, 0.0),
                 (right, top, 1.0, 1.0),
+            ],
+            dtype="f4",
+        )
+
+    def fullscreen_vertices(self):
+        return np.array(
+            [
+                (-1.0, 1.0, 0.0, 1.0),
+                (-1.0, -1.0, 0.0, 0.0),
+                (1.0, -1.0, 1.0, 0.0),
+                (-1.0, 1.0, 0.0, 1.0),
+                (1.0, -1.0, 1.0, 0.0),
+                (1.0, 1.0, 1.0, 1.0),
             ],
             dtype="f4",
         )
@@ -205,12 +227,89 @@ class HUD:
         self.pause_texture = self.ctx.texture(size, 4, data)
         self.pause_texture.filter = (mgl.LINEAR, mgl.LINEAR)
 
+    def update_startup_texture(self):
+        width, height = self.app.WIN_SIZE
+        surface = pg.Surface((width, height), flags=pg.SRCALPHA)
+        surface.fill((5, 8, 13, 226))
+
+        season_specs = [
+            ("SPRING", (255, 128, 184)),
+            ("SUMMER", (255, 196, 58)),
+            ("AUTUMN", (224, 92, 34)),
+            ("WINTER", (150, 210, 255)),
+        ]
+        band_w = width / 4.0
+        for idx, (_name, color) in enumerate(season_specs):
+            left = int(idx * band_w)
+            rect = pg.Rect(left, 0, int(band_w) + 2, height)
+            pg.draw.rect(surface, (*color, 30), rect)
+            pg.draw.rect(surface, (*color, 72), (left, height - 8, int(band_w) + 2, 8))
+
+        center = (width // 2, height // 2)
+        min_dim = min(width, height)
+        ring_size = max(190, int(min_dim * 0.42))
+        ring_rect = pg.Rect(0, 0, ring_size, ring_size)
+        ring_rect.center = (center[0], center[1] - int(min_dim * 0.035))
+        arc_width = max(6, int(min_dim * 0.014))
+        for idx, (_name, color) in enumerate(season_specs):
+            start = -math.pi / 2.0 + idx * math.pi / 2.0
+            pg.draw.arc(surface, (*color, 220), ring_rect, start, start + math.pi / 2.0, arc_width)
+
+        glow_rect = ring_rect.inflate(int(min_dim * 0.10), int(min_dim * 0.10))
+        pg.draw.ellipse(surface, (255, 255, 255, 18), glow_rect, width=max(2, arc_width // 2))
+        pg.draw.ellipse(surface, (12, 18, 26, 132), ring_rect.inflate(-arc_width * 3, -arc_width * 3))
+
+        def fitted_font(text, start_size, max_width, min_size=22):
+            size = start_size
+            font = pg.font.Font(None, size)
+            while size > min_size and font.size(text)[0] > max_width:
+                size -= 3
+                font = pg.font.Font(None, size)
+            return font
+
+        def blit_centered(text, font, y, color, shadow=(0, 0, 0, 130)):
+            text_surface = font.render(text, True, color)
+            shadow_surface = font.render(text, True, shadow)
+            rect = text_surface.get_rect(center=(center[0], y))
+            for offset in ((2, 2), (-1, 2), (2, -1)):
+                surface.blit(shadow_surface, rect.move(offset))
+            surface.blit(text_surface, rect)
+            return rect
+
+        title_font = fitted_font("4 SEASONS", int(min_dim * 0.155), int(width * 0.78), min_size=44)
+        subtitle_font = fitted_font("SAKURA SEASONAL SCENE", int(min_dim * 0.038), int(width * 0.72), min_size=18)
+        title_y = center[1] - int(min_dim * 0.065)
+        blit_centered("4 SEASONS", title_font, title_y, (250, 253, 255))
+        blit_centered("SAKURA SEASONAL SCENE", subtitle_font, title_y + int(min_dim * 0.082), (208, 224, 232), shadow=(0, 0, 0, 100))
+
+        chip_font = fitted_font("SPRING", int(min_dim * 0.030), max(92, int(width * 0.13)), min_size=15)
+        chip_y = min(height - 54, center[1] + int(min_dim * 0.205))
+        chip_gap = max(8, int(width * 0.012))
+        chip_w = min(138, max(86, int((width - chip_gap * 5) / 4.8)))
+        chip_h = max(28, int(min_dim * 0.044))
+        total_w = chip_w * 4 + chip_gap * 3
+        start_x = center[0] - total_w // 2
+        for idx, (name, color) in enumerate(season_specs):
+            rect = pg.Rect(start_x + idx * (chip_w + chip_gap), chip_y, chip_w, chip_h)
+            pg.draw.rect(surface, (*color, 72), rect, border_radius=6)
+            pg.draw.rect(surface, (*color, 185), rect, width=1, border_radius=6)
+            text = chip_font.render(name, True, (246, 250, 252))
+            surface.blit(text, text.get_rect(center=rect.center))
+
+        flipped = pg.transform.flip(surface, False, True)
+        data = pg.image.tostring(flipped, "RGBA")
+        if self.startup_texture is not None:
+            self.startup_texture.release()
+        self.startup_texture = self.ctx.texture((width, height), 4, data)
+        self.startup_texture.filter = (mgl.LINEAR, mgl.LINEAR)
+
     def render(self):
         if self.app.time - self.last_refresh >= self.refresh_interval or self.texture is None:
             self.update_texture()
             self.last_refresh = self.app.time
 
         self.ctx.disable(mgl.DEPTH_TEST)
+        self.program["u_alpha"].value = 1.0
         self.texture.use(location=0)
         self.vao.render()
         if self.app.paused:
@@ -218,20 +317,36 @@ class HUD:
                 self.update_pause_texture()
             self.pause_texture.use(location=0)
             self.pause_vao.render()
+        startup_alpha = self.app.startup_overlay_alpha()
+        if startup_alpha > 0.0:
+            if self.startup_texture is None:
+                self.update_startup_texture()
+            self.program["u_alpha"].value = max(0.0, min(1.0, startup_alpha))
+            self.startup_texture.use(location=0)
+            self.startup_vao.render()
+            self.program["u_alpha"].value = 1.0
         self.ctx.enable(mgl.DEPTH_TEST)
 
     def resize(self):
         self.vbo.write(self.quad_vertices().astype("f4").tobytes())
         self.pause_vbo.write(self.pause_vertices().astype("f4").tobytes())
+        self.startup_vbo.write(self.fullscreen_vertices().astype("f4").tobytes())
         self.last_refresh = -999.0
+        if self.startup_texture is not None:
+            self.startup_texture.release()
+            self.startup_texture = None
 
     def destroy(self):
         if self.texture is not None:
             self.texture.release()
         if self.pause_texture is not None:
             self.pause_texture.release()
+        if self.startup_texture is not None:
+            self.startup_texture.release()
         self.vao.release()
         self.pause_vao.release()
+        self.startup_vao.release()
         self.vbo.release()
         self.pause_vbo.release()
+        self.startup_vbo.release()
         self.program.release()

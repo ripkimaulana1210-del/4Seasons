@@ -41,6 +41,10 @@ class SxvxnEngine:
         self.frame_count = 0
         self.fps_avg = 0.0
         self.fps_min = 0.0
+        self.startup_overlay_start = pg.time.get_ticks() * 0.001
+        self.startup_overlay_duration = 4.2
+        self.startup_overlay_fade = 0.75
+        self.startup_overlay_skipped = False
 
         pg.display.gl_set_attribute(pg.GL_CONTEXT_MAJOR_VERSION, 3)
         pg.display.gl_set_attribute(pg.GL_CONTEXT_MINOR_VERSION, 3)
@@ -177,6 +181,21 @@ class SxvxnEngine:
         self.scene_renderer.shadow_renderer.enabled = not self.scene_renderer.shadow_renderer.enabled
         self.settings.set("shadow", self.scene_renderer.shadow_renderer.enabled)
 
+    def startup_overlay_alpha(self):
+        if self.startup_overlay_skipped:
+            return 0.0
+
+        elapsed = max(0.0, self.time - self.startup_overlay_start)
+        if elapsed >= self.startup_overlay_duration:
+            return 0.0
+
+        fade = max(0.01, self.startup_overlay_fade)
+        if elapsed < fade:
+            return elapsed / fade
+        if elapsed > self.startup_overlay_duration - fade:
+            return max(0.0, (self.startup_overlay_duration - elapsed) / fade)
+        return 1.0
+
     def update_adaptive_quality(self):
         if not self.adaptive_quality_enabled or self.delta_time <= 0:
             return
@@ -236,6 +255,11 @@ class SxvxnEngine:
 
             if self.paused and event.type == pg.KEYDOWN and event.key == pg.K_q:
                 self.quit()
+
+            if event.type == pg.KEYDOWN and event.key in (pg.K_RETURN, pg.K_SPACE):
+                if self.startup_overlay_alpha() > 0.0:
+                    self.startup_overlay_skipped = True
+                    continue
 
             if event.type == pg.KEYDOWN and self.editor.handle_key(event.key):
                 continue
