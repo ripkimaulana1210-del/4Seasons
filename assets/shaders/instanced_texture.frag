@@ -8,10 +8,8 @@ struct Light {
 };
 
 uniform Light light;
-uniform sampler2D u_texture;
 uniform vec3 cam_pos;
-uniform vec3 u_tint;
-uniform float u_alpha;
+uniform sampler2D u_texture;
 uniform vec3 u_fog_color;
 uniform float u_fog_density;
 uniform float u_fog_start;
@@ -24,6 +22,9 @@ in vec3 frag_pos;
 in vec3 normal;
 in vec2 uv;
 in vec4 shadow_pos;
+in vec3 v_tint;
+in vec2 v_repeat;
+in float v_alpha;
 
 out vec4 fragColor;
 
@@ -70,9 +71,6 @@ float shadow_factor(vec3 N, vec3 L) {
 }
 
 void main() {
-    vec4 texel = texture(u_texture, uv);
-    vec3 base_color = texel.rgb * u_tint;
-
     vec3 N = normalize(normal);
     vec3 L = normalize(light.position - frag_pos);
     vec3 V = normalize(cam_pos - frag_pos);
@@ -82,12 +80,14 @@ void main() {
     vec3 R = reflect(-L, N);
 
     float diff = max(dot(N, L), 0.0);
-    float spec = pow(max(dot(V, R), 0.0), 24.0) * step(0.0, diff) * 0.35;
+    float spec = pow(max(dot(V, R), 0.0), 32.0) * step(0.0, diff);
 
-    vec3 ambient = light.Ia * base_color;
-    vec3 diffuse = light.Id * diff * base_color;
+    vec3 tex_color = texture(u_texture, uv * v_repeat).rgb * v_tint;
+    vec3 ambient = light.Ia * tex_color;
+    vec3 diffuse = light.Id * diff * tex_color;
     vec3 specular = light.Is * spec;
     float shadow = shadow_factor(N, L);
+    vec3 final_color = ambient + (diffuse + specular) * shadow;
 
-    fragColor = vec4(apply_fog(ambient + (diffuse + specular) * shadow, frag_pos), texel.a * u_alpha);
+    fragColor = vec4(apply_fog(final_color, frag_pos), v_alpha);
 }

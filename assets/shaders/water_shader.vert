@@ -32,7 +32,7 @@ void main() {
 
     vec4 world_pos = m_model * vec4(pos, 1.0);
 
-    mat3 normal_matrix = mat3(transpose(inverse(m_model)));
+    mat3 normal_matrix = mat3(m_model);
     v_normal = normalize(normal_matrix * local_normal);
     v_world_pos = world_pos.xyz;
     v_wave = wave;

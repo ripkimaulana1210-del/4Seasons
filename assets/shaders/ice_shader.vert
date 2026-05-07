@@ -23,7 +23,7 @@ void main() {
 
     vec4 world_pos = m_model * vec4(pos, 1.0);
     v_world_pos = world_pos.xyz;
-    v_normal = normalize(mat3(transpose(inverse(m_model))) * in_normal);
+    v_normal = normalize(mat3(m_model) * in_normal);
     v_uv = in_uv;
     v_crystal = crystal;
     v_shadow_pos = m_light_space * world_pos;

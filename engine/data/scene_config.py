@@ -37,6 +37,9 @@ QUALITY_PROFILES = [
     {
         "id": "low",
         "name": "Low",
+        "shadow_map_size": 1024,
+        "shadow_min_scale": 0.12,
+        "shadow_pcf": 0,
         "culling": {
             "opaque_distance": 24.0,
             "transparent_distance": 30.0,
@@ -55,6 +58,9 @@ QUALITY_PROFILES = [
     {
         "id": "medium",
         "name": "Medium",
+        "shadow_map_size": 1536,
+        "shadow_min_scale": 0.06,
+        "shadow_pcf": 1,
         "culling": {
             "opaque_distance": 36.0,
             "transparent_distance": 44.0,
@@ -73,6 +79,9 @@ QUALITY_PROFILES = [
     {
         "id": "high",
         "name": "High",
+        "shadow_map_size": 2048,
+        "shadow_min_scale": 0.0,
+        "shadow_pcf": 2,
         "culling": {
             "opaque_distance": 58.0,
             "transparent_distance": 68.0,

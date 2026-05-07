@@ -61,7 +61,11 @@ class SceneEditor:
         obj.pos.y += dy
         obj.pos.z += dz
         obj.m_model = obj.get_model_matrix()
-        self.app.scene_renderer.instanced_color.scene_id = None
+        renderer = self.app.scene_renderer
+        renderer.instanced_color.scene_id = None
+        renderer.instanced_texture.scene_id = None
+        renderer.instanced_emissive.scene_id = None
+        renderer.shadow_renderer.invalidate_cache()
 
     def dump_selected(self):
         obj = self.selected()

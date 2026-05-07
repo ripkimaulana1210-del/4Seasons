@@ -18,6 +18,7 @@ uniform float u_fog_start;
 uniform float u_fog_end;
 uniform sampler2D u_shadow_map;
 uniform float u_shadow_strength;
+uniform int u_shadow_pcf;
 
 in vec3 frag_pos;
 in vec3 normal;
@@ -45,13 +46,27 @@ float shadow_factor(vec3 N, vec3 L) {
     float bias = max(0.0036 * (1.0 - dot(N, L)), 0.0012);
     vec2 texel = 1.0 / vec2(textureSize(u_shadow_map, 0));
     float shadow = 0.0;
-    for (int x = -1; x <= 1; x++) {
-        for (int y = -1; y <= 1; y++) {
-            float closest = texture(u_shadow_map, proj.xy + vec2(x, y) * texel).r;
-            shadow += proj.z - bias > closest ? 1.0 : 0.0;
+    if (u_shadow_pcf <= 0) {
+        float closest = texture(u_shadow_map, proj.xy).r;
+        shadow = proj.z - bias > closest ? 1.0 : 0.0;
+    } else if (u_shadow_pcf == 1) {
+        for (int x = 0; x < 2; x++) {
+            for (int y = 0; y < 2; y++) {
+                vec2 offset = (vec2(float(x), float(y)) - vec2(0.5)) * texel;
+                float closest = texture(u_shadow_map, proj.xy + offset).r;
+                shadow += proj.z - bias > closest ? 1.0 : 0.0;
+            }
         }
+        shadow *= 0.25;
+    } else {
+        for (int x = -1; x <= 1; x++) {
+            for (int y = -1; y <= 1; y++) {
+                float closest = texture(u_shadow_map, proj.xy + vec2(x, y) * texel).r;
+                shadow += proj.z - bias > closest ? 1.0 : 0.0;
+            }
+        }
+        shadow /= 9.0;
     }
-    shadow /= 9.0;
     return mix(1.0, 1.0 - u_shadow_strength * 0.72, shadow);
 }
 
