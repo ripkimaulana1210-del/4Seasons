@@ -60,10 +60,39 @@ def _write_shadow_uniforms(program, app):
     shadow.bind(location=1)
     _set_uniform_value(program, "u_shadow_map", 1)
     _set_uniform_value(program, "u_shadow_strength", shadow.strength if shadow.enabled else 0.0)
+    _set_uniform_value(program, "u_shadow_pcf", _shadow_pcf_level(app))
     try:
         program["m_light_space"].write(shadow.light_space)
     except KeyError:
         return
+
+
+def _shadow_pcf_level(app):
+    quality = getattr(app, "quality", None)
+    if quality is None:
+        return 2
+    return int(quality.current.get("shadow_pcf", 2))
+
+
+def _frame_stamp_cache(app):
+    cache = getattr(app, "_uniform_frame_stamps", None)
+    if cache is None:
+        cache = {}
+        app._uniform_frame_stamps = cache
+    return cache
+
+
+def _should_write_program_frame_uniforms(app, program, channel, force=False):
+    frame = getattr(app, "frame_count", 0)
+    key = (id(program), channel)
+    cache = _frame_stamp_cache(app)
+    if force:
+        cache[key] = frame
+        return True
+    if cache.get(key) == frame:
+        return False
+    cache[key] = frame
+    return True
 
 
 class BaseModelColor:
@@ -110,15 +139,20 @@ class BaseModelColor:
         return m_model
 
     def update(self):
+        self.write_per_frame_uniforms()
+        self.write_per_object_uniforms()
+
+    def write_per_frame_uniforms(self, force=False):
+        if not _should_write_program_frame_uniforms(self.app, self.program, "color", force):
+            return
         light = self.app.light
+        self.program["m_proj"].write(self.camera.m_proj)
         self.program["light.position"].write(light.position)
         self.program["light.Ia"].write(light.Ia)
         self.program["light.Id"].write(light.Id)
         self.program["light.Is"].write(light.Is)
         self.program["m_view"].write(self.camera.m_view)
-        self.program["m_model"].write(self.m_model)
         self.program["cam_pos"].write(self.camera.position)
-        self.program["u_color"].write(self.color)
         _write_fog_uniforms(self.program, self.app)
         _write_shadow_uniforms(self.program, self.app)
         _set_uniform_value(self.program, "u_time", self.app.time)
@@ -131,8 +165,18 @@ class BaseModelColor:
                 self.app.season_controller.current.get("wind_strength", 0.7),
             )
 
+    def write_per_object_uniforms(self):
+        self.program["m_model"].write(self.m_model)
+        self.program["u_color"].write(self.color)
+
     def render(self):
         self.update()
+        self.vao.render()
+
+    def render_fast(self):
+        """Render with minimal uniform writes. Per-frame uniforms (light,
+        camera, fog, shadow) must already be set by the scene renderer."""
+        self.write_per_object_uniforms()
         self.vao.render()
 
 
@@ -175,13 +219,26 @@ class BaseModelEmissive:
         return m_model
 
     def update(self):
+        self.write_per_frame_uniforms()
+        self.write_per_object_uniforms()
+
+    def write_per_frame_uniforms(self, force=False):
+        if not _should_write_program_frame_uniforms(self.app, self.program, "emissive", force):
+            return
+        self.program["m_proj"].write(self.camera.m_proj)
         self.program["m_view"].write(self.camera.m_view)
+
+    def write_per_object_uniforms(self):
         self.program["m_model"].write(self.m_model)
         self.program["u_color"].write(self.color)
         self.program["u_alpha"].value = self.alpha
 
     def render(self):
         self.update()
+        self.vao.render()
+
+    def render_fast(self):
+        self.write_per_object_uniforms()
         self.vao.render()
 
 
@@ -381,23 +438,37 @@ class BaseModelTexture:
         return m_model
 
     def update(self):
+        self.write_per_frame_uniforms()
+        self.write_per_object_uniforms()
+
+    def write_per_frame_uniforms(self, force=False):
+        if not _should_write_program_frame_uniforms(self.app, self.program, "texture", force):
+            return
         light = self.app.light
-        self.texture.use(location=0)
+        self.program["m_proj"].write(self.camera.m_proj)
         self.program["light.position"].write(light.position)
         self.program["light.Ia"].write(light.Ia)
         self.program["light.Id"].write(light.Id)
         self.program["light.Is"].write(light.Is)
         self.program["m_view"].write(self.camera.m_view)
-        self.program["m_model"].write(self.m_model)
         self.program["cam_pos"].write(self.camera.position)
-        self.program["u_tint"].write(self.tint)
-        self.program["u_repeat"].write(self.repeat)
-        self.program["u_alpha"].value = self.alpha
+        self.program["u_texture"].value = 0
         _write_fog_uniforms(self.program, self.app)
         _write_shadow_uniforms(self.program, self.app)
 
+    def write_per_object_uniforms(self):
+        self.texture.use(location=0)
+        self.program["m_model"].write(self.m_model)
+        self.program["u_tint"].write(self.tint)
+        self.program["u_repeat"].write(self.repeat)
+        self.program["u_alpha"].value = self.alpha
+
     def render(self):
         self.update()
+        self.vao.render()
+
+    def render_fast(self):
+        self.write_per_object_uniforms()
         self.vao.render()
 
 

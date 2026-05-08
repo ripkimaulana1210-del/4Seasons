@@ -363,6 +363,13 @@ class SeasonController:
         self.temperature_c = self.calculate_temperature()
         self.update_caption(force=True)
 
+    def stop_time_lapse(self):
+        if not self.time_lapse_enabled:
+            return
+        self.time_lapse_enabled = False
+        self.temperature_c = self.calculate_temperature()
+        self.update_caption(force=True)
+
     def toggle_day_cycle(self):
         self.day_cycle_enabled = not self.day_cycle_enabled
         self.apply_atmosphere()
@@ -372,6 +379,9 @@ class SeasonController:
         self.day_time = day_time % 1.0
         self.apply_atmosphere()
         self.update_caption(force=True)
+
+    def adjust_day_time_hours(self, hours):
+        self.set_day_time(self.day_time + (hours / 24.0))
 
     def change_speed(self, multiplier):
         self.season_duration = max(2.0, min(40.0, self.season_duration * multiplier))
@@ -389,12 +399,18 @@ class SeasonController:
             self.set_season(3)
         elif key == pg.K_t:
             self.toggle_time_lapse()
+        elif key == pg.K_x:
+            self.stop_time_lapse()
         elif key == pg.K_y:
             self.toggle_day_cycle()
         elif key == pg.K_l:
             self.set_day_time(0.04)
         elif key == pg.K_o:
             self.set_day_time(0.34)
+        elif key == pg.K_j:
+            self.adjust_day_time_hours(-1.0)
+        elif key == pg.K_k:
+            self.adjust_day_time_hours(1.0)
         elif key == pg.K_n:
             self.next_season()
         elif key == pg.K_p:
@@ -479,7 +495,7 @@ class SeasonController:
             f"Time-lapse {mode} ({self.season_duration:0.1f}s/musim)"
             f" | {period} {clock_hour:02d}:{clock_minute:02d} Day-cycle {day_mode}"
             f"{transition} | "
-            "1-4 musim, T auto musim, Y auto hari, L malam, O pagi, N/P geser, "
+            "1-4 musim, T auto musim, X stop auto musim, Y auto hari, J/K jam, L malam, O pagi, N/P geser, "
             "M mute, +/- speed, F1 kamera musim, F2 screenshot, F5-F8 kamera, F9 quality, "
             "C cinematic, F11 fullscreen, Esc pause"
         )

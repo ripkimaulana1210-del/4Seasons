@@ -15,7 +15,7 @@ out vec4 shadow_pos;
 void main() {
     vec4 world_pos = m_model * vec4(in_position, 1.0);
     frag_pos = world_pos.xyz;
-    normal = mat3(transpose(inverse(m_model))) * in_normal;
+    normal = mat3(m_model) * in_normal;
     shadow_pos = m_light_space * world_pos;
     gl_Position = m_proj * m_view * world_pos;
 }

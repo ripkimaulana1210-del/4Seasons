@@ -212,6 +212,7 @@ class HUD:
             "Esc resume",
             "Q exit",
             "F2 screenshot | F3 editor | F5-F8 camera | F9 quality",
+            "T auto musim | X stop auto | Y auto hari | J/K jam | L/O preset",
             "F10 profile | F11 fullscreen | F12 post | F4 shadow/editor dump",
         ]
         y = 76
