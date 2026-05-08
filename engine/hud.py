@@ -71,8 +71,7 @@ class HUD:
 
     def pause_vertices(self):
         width, height = self.app.WIN_SIZE
-        panel_w = min(460, width - 48)
-        panel_h = 218
+        panel_w, panel_h = self.pause_panel_size()
         left = -panel_w / width
         right = panel_w / width
         top = panel_h / height
@@ -88,6 +87,12 @@ class HUD:
             ],
             dtype="f4",
         )
+
+    def pause_panel_size(self):
+        width, height = self.app.WIN_SIZE
+        panel_w = min(760, max(420, width - 48))
+        panel_h = min(420, max(260, height - 48))
+        return int(panel_w), int(panel_h)
 
     def fullscreen_vertices(self):
         return np.array(
@@ -201,25 +206,31 @@ class HUD:
         self.texture.filter = (mgl.LINEAR, mgl.LINEAR)
 
     def update_pause_texture(self):
-        size = (460, 218)
+        size = self.pause_panel_size()
         surface = pg.Surface(size, flags=pg.SRCALPHA)
         pg.draw.rect(surface, (10, 14, 18, 218), surface.get_rect(), border_radius=10)
         pg.draw.rect(surface, (236, 242, 246, 70), surface.get_rect(), width=1, border_radius=10)
 
         title = self.title_font.render("Paused", True, (250, 252, 255))
-        surface.blit(title, (24, 22))
+        surface.blit(title, (24, 16))
         lines = [
-            "Esc resume",
-            "Q exit",
-            "F2 screenshot | F3 editor | F5-F8 camera | F9 quality",
-            "T auto musim | X stop auto | Y auto hari | J/K jam | L/O preset",
-            "F10 profile | F11 fullscreen | F12 post | F4 shadow/editor dump",
+            "Esc pause/resume | Q exit saat pause | Enter/Space skip intro",
+            "W/A/S/D gerak | Q/E turun-naik | Mouse lihat | Shift cepat | Ctrl pelan",
+            "Tab free/orbit | Mouse wheel zoom | ` mouse grab | C cinematic",
+            "1-4 pilih musim | N/P next-prev | T auto musim | X stop auto musim",
+            "Y auto hari | J/K geser jam | L malam | O pagi | +/- speed",
+            "M mute | H HUD | F1 preset musim | F2 screenshot",
+            "F3 editor | F4 shadow (normal) / dump transform (editor)",
+            "F5 sakura | F6 bridge | F7 village | F8 fuji",
+            "F9 quality | F10 profile | F11 fullscreen | F12 post",
+            "Editor ON: [/] pilih objek | Arrows X/Z | PgUp/PgDn Y",
         ]
-        y = 76
+        y = 66
+        line_step = 22 if size[1] >= 360 else 20
         for line in lines:
-            text = self.fit_text(line, self.font, size[0] - 48)
-            surface.blit(self.font.render(text, True, (214, 224, 230)), (24, y))
-            y += 28
+            text = self.fit_text(line, self.small_font, size[0] - 48)
+            surface.blit(self.small_font.render(text, True, (214, 224, 230)), (24, y))
+            y += line_step
 
         flipped = pg.transform.flip(surface, False, True)
         data = pg.image.tostring(flipped, "RGBA")
@@ -333,6 +344,9 @@ class HUD:
         self.pause_vbo.write(self.pause_vertices().astype("f4").tobytes())
         self.startup_vbo.write(self.fullscreen_vertices().astype("f4").tobytes())
         self.last_refresh = -999.0
+        if self.pause_texture is not None:
+            self.pause_texture.release()
+            self.pause_texture = None
         if self.startup_texture is not None:
             self.startup_texture.release()
             self.startup_texture = None

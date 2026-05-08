@@ -8,6 +8,7 @@ DEFAULT_SETTINGS = {
     "postprocess": True,
     "shadow": True,
     "profile_visible": True,
+    "hud_visible": True,
     "audio_muted": False,
     "fullscreen": False,
     "windowed_size": [1280, 720],

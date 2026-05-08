@@ -496,7 +496,7 @@ class SeasonController:
             f" | {period} {clock_hour:02d}:{clock_minute:02d} Day-cycle {day_mode}"
             f"{transition} | "
             "1-4 musim, T auto musim, X stop auto musim, Y auto hari, J/K jam, L malam, O pagi, N/P geser, "
-            "M mute, +/- speed, F1 kamera musim, F2 screenshot, F5-F8 kamera, F9 quality, "
+            "M mute, H HUD, +/- speed, F1 kamera musim, F2 screenshot, F5-F8 kamera, F9 quality, "
             "C cinematic, F11 fullscreen, Esc pause"
         )
         pg.display.set_caption(caption)

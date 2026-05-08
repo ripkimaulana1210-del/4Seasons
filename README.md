@@ -54,6 +54,7 @@ scripts\windows\run.bat
 | `L / O` | Set malam / pagi |
 | `+ / -` | Ubah kecepatan time-lapse |
 | `M` | Mute / unmute audio |
+| `H` | Toggle HUD |
 | `` ` `` | Toggle mouse grab |
 | `F1` | Camera preset terbaik untuk musim aktif |
 | `F2` | Simpan screenshot ke `docs/previews/` |

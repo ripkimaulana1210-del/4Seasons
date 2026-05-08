@@ -32,7 +32,7 @@ class SxvxnEngine:
         self.last_screenshot_path = ""
         self.paused = False
         self.profile_visible = bool(self.settings.get("profile_visible", True))
-        self.hud_visible = True
+        self.hud_visible = bool(self.settings.get("hud_visible", True))
         self.adaptive_quality_enabled = bool(self.settings.get("adaptive_quality", True))
         self.adaptive_quality_status = "Adaptive siap"
         self.adaptive_quality_timer = 0.0
@@ -173,6 +173,10 @@ class SxvxnEngine:
         self.profile_visible = not self.profile_visible
         self.settings.set("profile_visible", self.profile_visible)
 
+    def toggle_hud(self):
+        self.hud_visible = not self.hud_visible
+        self.settings.set("hud_visible", self.hud_visible)
+
     def toggle_postprocess(self):
         self.post_processor.enabled = not self.post_processor.enabled
         self.settings.set("postprocess", self.post_processor.enabled)
@@ -297,6 +301,8 @@ class SxvxnEngine:
                     self.cycle_quality()
                 elif event.key == pg.K_F10:
                     self.toggle_profile()
+                elif event.key == pg.K_h:
+                    self.toggle_hud()
                 elif event.key == pg.K_F12:
                     self.toggle_postprocess()
                 elif event.key == pg.K_F4:
