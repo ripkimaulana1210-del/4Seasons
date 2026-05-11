@@ -34,6 +34,36 @@ CAMERA_PRESETS = {
 }
 
 TRANSITION_PRESETS = {
+    "winter->early_spring": {
+        "duration": 7.0,
+        "camera_route": ("season_winter", "bridge", "season_spring"),
+        "timeline": (("Wet snow", 0.00, 0.45), ("Thaw", 0.18, 0.72), ("Sprouts", 0.46, 1.00)),
+        "audio_cue": "thaw",
+    },
+    "early_spring->spring": {
+        "duration": 6.0,
+        "camera_route": ("season_spring", "sakura", "bridge"),
+        "timeline": (("Mist clears", 0.00, 0.42), ("Grass", 0.22, 0.72), ("Flowers", 0.46, 1.00)),
+        "audio_cue": "blend",
+    },
+    "spring->hanami": {
+        "duration": 6.0,
+        "camera_route": ("season_spring", "sakura", "season_spring"),
+        "timeline": (("Bud color", 0.12, 0.52), ("Full bloom", 0.32, 0.86), ("Petal rain", 0.52, 1.00)),
+        "audio_cue": "blend",
+    },
+    "hanami->tsuyu": {
+        "duration": 6.5,
+        "camera_route": ("sakura", "bridge", "season_spring"),
+        "timeline": (("Petals fall", 0.00, 0.48), ("Clouds", 0.20, 0.72), ("Rain", 0.42, 1.00)),
+        "audio_cue": "rain",
+    },
+    "tsuyu->summer": {
+        "duration": 6.5,
+        "camera_route": ("season_spring", "bridge", "season_summer"),
+        "timeline": (("Rain fades", 0.00, 0.52), ("Clear sky", 0.24, 0.78), ("Heat", 0.44, 1.00)),
+        "audio_cue": "heat",
+    },
     "winter->spring": {
         "duration": 8.0,
         "camera_route": ("season_winter", "bridge", "sakura", "season_spring"),
@@ -57,6 +87,24 @@ TRANSITION_PRESETS = {
         ),
         "audio_cue": "heat",
     },
+    "summer->midsummer": {
+        "duration": 6.0,
+        "camera_route": ("season_summer", "village", "season_summer"),
+        "timeline": (("Heat peak", 0.12, 0.72), ("Lanterns", 0.32, 0.96), ("Fireflies", 0.52, 1.00)),
+        "audio_cue": "heat",
+    },
+    "midsummer->late_summer": {
+        "duration": 6.0,
+        "camera_route": ("village", "season_summer", "bridge"),
+        "timeline": (("Festival fades", 0.00, 0.46), ("Dry grass", 0.28, 0.88), ("Dust", 0.42, 1.00)),
+        "audio_cue": "blend",
+    },
+    "late_summer->autumn": {
+        "duration": 6.5,
+        "camera_route": ("season_summer", "sakura", "season_autumn"),
+        "timeline": (("Dry heat", 0.00, 0.48), ("Yellowing", 0.24, 0.84), ("First leaves", 0.44, 1.00)),
+        "audio_cue": "leaves",
+    },
     "summer->autumn": {
         "duration": 7.5,
         "camera_route": ("season_summer", "sakura", "season_autumn"),
@@ -68,6 +116,36 @@ TRANSITION_PRESETS = {
         ),
         "audio_cue": "leaves",
     },
+    "autumn->momiji": {
+        "duration": 6.0,
+        "camera_route": ("season_autumn", "sakura", "season_autumn"),
+        "timeline": (("Red leaves", 0.14, 0.72), ("Leaf carpet", 0.28, 0.92), ("Golden sun", 0.48, 1.00)),
+        "audio_cue": "leaves",
+    },
+    "momiji->first_frost": {
+        "duration": 6.5,
+        "camera_route": ("season_autumn", "bridge", "season_winter"),
+        "timeline": (("Color fades", 0.00, 0.48), ("Cold mist", 0.20, 0.82), ("First frost", 0.42, 1.00)),
+        "audio_cue": "snow",
+    },
+    "first_frost->winter": {
+        "duration": 6.5,
+        "camera_route": ("season_autumn", "bridge", "season_winter"),
+        "timeline": (("Frost spreads", 0.00, 0.58), ("Snow cover", 0.32, 1.00), ("Quiet light", 0.54, 1.00)),
+        "audio_cue": "snow",
+    },
+    "winter->deep_winter": {
+        "duration": 6.5,
+        "camera_route": ("season_winter", "fuji", "season_winter"),
+        "timeline": (("Snow deepens", 0.00, 0.68), ("Pond stills", 0.28, 0.90), ("Aurora glow", 0.56, 1.00)),
+        "audio_cue": "snow",
+    },
+    "first_frost->deep_winter": {
+        "duration": 7.0,
+        "camera_route": ("season_winter", "fuji", "season_winter"),
+        "timeline": (("Frost thickens", 0.00, 0.55), ("Snow cover", 0.24, 0.92), ("Aurora", 0.56, 1.00)),
+        "audio_cue": "snow",
+    },
     "autumn->winter": {
         "duration": 8.0,
         "camera_route": ("season_autumn", "bridge", "season_winter"),
@@ -78,6 +156,53 @@ TRANSITION_PRESETS = {
             ("Aurora", 0.62, 1.00),
         ),
         "audio_cue": "snow",
+    },
+    "deep_winter->early_spring": {
+        "duration": 8.0,
+        "camera_route": ("season_winter", "bridge", "sakura", "season_spring"),
+        "timeline": (("Deep ice", 0.00, 0.40), ("Crack", 0.12, 0.56), ("Thaw", 0.34, 0.86), ("Sprout", 0.62, 1.00)),
+        "audio_cue": "thaw",
+    },
+}
+
+SCENE_LAYOUT = {
+    "ground": {
+        "pos": (0.0, -0.055, 0.0),
+        "scale": (21.0, 1.0, 21.0),
+        "repeat": (18.0, 18.0),
+    },
+    "pond": {
+        "radius_scale": 5.55 / 4.80,
+        "center": (0.0, 0.0, 0.0),
+    },
+    "island": {
+        "radius_scale": 2.35 / 1.95,
+        "center": (0.0, 0.0, 0.0),
+    },
+    "sakura_tree": {
+        "pos": (0.0, 0.24, 0.0),
+        "rot": (0.0, 0.0, 0.0),
+        "scale": (1.28, 1.28, 1.28),
+    },
+    "road": {
+        "radius": 8.55,
+        "width": 0.90,
+    },
+    "bridge": {
+        "center": (0.0, 0.0, 5.90),
+        "yaw": 0.0,
+    },
+    "building_additions": {
+        "tea_house": {"pos": (-7.4, 2.2), "yaw": 38.0, "scale": 0.86},
+        "pavilion": {"pos": (-4.7, 5.95), "yaw": 18.0, "scale": 0.78},
+        "water_mill": {"pos": (-8.85, -4.95), "yaw": -38.0, "scale": 0.78},
+        "secondary_torii": {"pos": (0.0, 13.20), "yaw": 0.0, "scale": 0.82},
+        "yatai_row": {"pos": (5.6, 9.25), "yaw": -24.0, "scale": 0.78},
+        "bathhouse": {"pos": (-10.2, -7.15), "yaw": 34.0, "scale": 0.86},
+        "storage_shed": {"pos": (13.15, 2.75), "yaw": 78.0, "scale": 0.72},
+        "viewing_deck": {"pos": (-5.95, 7.45), "yaw": 24.0, "scale": 0.82},
+        "covered_bridge": {"scale": 0.76},
+        "rice_field": {"pos": (12.15, -5.70), "yaw": -12.0, "scale": 0.90},
     },
 }
 

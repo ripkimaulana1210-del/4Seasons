@@ -2,19 +2,56 @@ import math
 import pygame as pg
 
 from ..seasons.season_autumn import SEASON as AUTUMN
+from ..seasons.season_deep_winter import SEASON as DEEP_WINTER
+from ..seasons.season_early_spring import SEASON as EARLY_SPRING
+from ..seasons.season_first_frost import SEASON as FIRST_FROST
+from ..seasons.season_hanami import SEASON as HANAMI
+from ..seasons.season_late_summer import SEASON as LATE_SUMMER
+from ..seasons.season_midsummer import SEASON as MIDSUMMER
+from ..seasons.season_momiji import SEASON as MOMIJI
 from ..seasons.season_spring import SEASON as SPRING
 from ..seasons.season_summer import SEASON as SUMMER
+from ..seasons.season_tsuyu import SEASON as TSUYU
 from ..seasons.season_winter import SEASON as WINTER
-from .season_transition_manager import SeasonTransitionManager
+from .season_transition_manager import SeasonTransitionManager, transition_effect_family
 
 
-SEASONS = [SPRING, SUMMER, AUTUMN, WINTER]
+SEASONS = [
+    EARLY_SPRING,
+    SPRING,
+    HANAMI,
+    TSUYU,
+    SUMMER,
+    MIDSUMMER,
+    LATE_SUMMER,
+    AUTUMN,
+    MOMIJI,
+    FIRST_FROST,
+    WINTER,
+    DEEP_WINTER,
+]
+SEASON_BY_ID = {season["id"]: season for season in SEASONS}
+DEFAULT_SEASON_ID = "spring"
 
 
 TRANSITION_STORIES = {
+    "winter->early_spring": "Salju mulai basah, es menipis, dan tanah pertama kali terlihat.",
+    "early_spring->spring": "Tunas awal menjadi taman hijau yang lebih jelas.",
+    "spring->hanami": "Sakura masuk puncak mekar dan kelopak mulai memenuhi udara.",
+    "hanami->tsuyu": "Kelopak pelan-pelan turun, lalu hujan musim basah datang.",
+    "tsuyu->summer": "Awan hujan pecah, cahaya menjadi cerah dan panas.",
     "spring->summer": "Gelombang panas: udara naik cepat, cahaya makin terik.",
+    "summer->midsummer": "Panas mencapai puncak, lampion festival mulai menyala.",
+    "midsummer->late_summer": "Riuh festival mereda menjadi panas kering akhir musim.",
+    "late_summer->autumn": "Rumput kering berubah kusam dan daun pertama menguning.",
     "summer->autumn": "Daun mulai layu, menguning, lalu berguguran.",
+    "autumn->momiji": "Daun gugur mencapai warna merah-oranye paling kuat.",
+    "momiji->first_frost": "Karpet daun memucat saat frost pertama menyentuh batu.",
+    "first_frost->winter": "Frost pertama berubah menjadi winter yang lebih putih dan hening.",
+    "winter->deep_winter": "Winter menebal menjadi salju penuh dan malam aurora.",
+    "first_frost->deep_winter": "Embun beku berubah menjadi salju tebal dan malam aurora.",
     "autumn->winter": "Udara membeku, salju pertama turun sedikit demi sedikit.",
+    "deep_winter->early_spring": "Deep winter mulai retak, air bergerak lagi di bawah es.",
     "winter->spring": "Es retak dan mencair, tunas tumbuh, lalu taman kembali bermekaran.",
 }
 
@@ -71,7 +108,7 @@ def season_mid_temperature(season):
 class SeasonController:
     def __init__(self, app):
         self.app = app
-        self.current_index = 0
+        self.current_index = self.index_for_id(DEFAULT_SEASON_ID)
         self.elapsed = 0.0
         self.season_duration = 8.0
         self.time_lapse_enabled = False
@@ -91,6 +128,12 @@ class SeasonController:
     @property
     def current(self):
         return SEASONS[self.current_index]
+
+    def index_for_id(self, season_id):
+        for index, season in enumerate(SEASONS):
+            if season["id"] == season_id:
+                return index
+        return 0
 
     @property
     def transition_duration(self):
@@ -150,7 +193,7 @@ class SeasonController:
             eased = 0.5 - 0.5 * math.cos(progress * math.pi)
             from_temp = season_mid_temperature(self.transition_from)
             to_temp = season_mid_temperature(self.transition_to)
-            pair = f"{self.transition_from['id']}->{self.transition_to['id']}"
+            pair = transition_effect_family(f"{self.transition_from['id']}->{self.transition_to['id']}")
 
             if pair == "spring->summer":
                 heat_peak = 38.0
@@ -168,6 +211,8 @@ class SeasonController:
             if pair == "winter->spring":
                 thaw = lerp(from_temp, 8.0, smoothstep(min(progress / 0.45, 1.0)))
                 return lerp(thaw, to_temp, smoothstep(max((progress - 0.35) / 0.65, 0.0)))
+
+            return lerp(from_temp, to_temp, eased)
 
         low, high = self.current["temperature_range"]
         if self.time_lapse_enabled:
@@ -361,10 +406,9 @@ class SeasonController:
         self.update_caption(force=True)
 
     def start_transition_by_id(self, from_id, to_id, duration=None):
-        by_id = {season["id"]: season for season in SEASONS}
-        if from_id not in by_id or to_id not in by_id:
+        if from_id not in SEASON_BY_ID or to_id not in SEASON_BY_ID:
             return
-        self.start_transition(by_id[from_id], by_id[to_id], duration=duration)
+        self.start_transition(SEASON_BY_ID[from_id], SEASON_BY_ID[to_id], duration=duration)
 
     def on_transition_started(self):
         snapshot = self.transition_snapshot()
@@ -413,14 +457,42 @@ class SeasonController:
 
     def handle_key(self, key):
         direct_select = bool(pg.key.get_mods() & (pg.KMOD_SHIFT | pg.KMOD_CTRL))
-        if key == pg.K_1:
-            self.set_season(0) if direct_select else self.start_transition_by_id("winter", "spring")
+        direct_keys = {
+            pg.K_1: 0,
+            pg.K_2: 1,
+            pg.K_3: 2,
+            pg.K_4: 3,
+            pg.K_5: 4,
+            pg.K_6: 5,
+            pg.K_7: 6,
+            pg.K_8: 7,
+            pg.K_9: 8,
+            pg.K_0: 9,
+            pg.K_LEFTBRACKET: 10,
+            pg.K_RIGHTBRACKET: 11,
+        }
+        if direct_select and key in direct_keys:
+            self.set_season(direct_keys[key])
+        elif key == pg.K_1:
+            self.start_transition_by_id("winter", "spring")
         elif key == pg.K_2:
-            self.set_season(1) if direct_select else self.start_transition_by_id("spring", "summer")
+            self.start_transition_by_id("spring", "summer")
         elif key == pg.K_3:
-            self.set_season(2) if direct_select else self.start_transition_by_id("summer", "autumn")
+            self.start_transition_by_id("summer", "autumn")
         elif key == pg.K_4:
-            self.set_season(3) if direct_select else self.start_transition_by_id("autumn", "winter")
+            self.start_transition_by_id("autumn", "winter")
+        elif key == pg.K_5:
+            self.start_transition_by_id("spring", "hanami")
+        elif key == pg.K_6:
+            self.start_transition_by_id("hanami", "tsuyu")
+        elif key == pg.K_7:
+            self.start_transition_by_id("summer", "midsummer")
+        elif key == pg.K_8:
+            self.start_transition_by_id("midsummer", "late_summer")
+        elif key == pg.K_9:
+            self.start_transition_by_id("autumn", "momiji")
+        elif key == pg.K_0:
+            self.start_transition_by_id("first_frost", "winter")
         elif key == pg.K_t:
             self.toggle_time_lapse()
         elif key == pg.K_x:
@@ -516,7 +588,7 @@ class SeasonController:
             f"Time-lapse {mode} ({self.season_duration:0.1f}s/musim)"
             f" | {period} {clock_hour:02d}:{clock_minute:02d} Day-cycle {day_mode}"
             f"{transition} | "
-            "1-4 transisi debug, Shift+1-4 pilih musim, T auto musim, X stop auto musim, "
+            "1-4 transisi utama, 5-0 micro-season, Shift+1-0/[ ] pilih musim, T auto musim, X stop auto musim, "
             "Y auto hari, J/K jam, L malam, O pagi, N/P geser, "
             "M mute, H HUD, +/- speed, F1 kamera musim, F2 screenshot, F5-F8 kamera, F9 quality, "
             "C cinematic, F11 fullscreen, Esc pause"

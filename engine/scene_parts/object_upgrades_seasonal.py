@@ -1,0 +1,9 @@
+from .object_upgrades_seasonal_base import SceneSeasonalObjectBaseMixin
+from .object_upgrades_spring import SceneSpringObjectUpgradeMixin
+from .object_upgrades_summer import SceneSummerObjectUpgradeMixin
+from .object_upgrades_autumn import SceneAutumnObjectUpgradeMixin
+from .object_upgrades_winter import SceneWinterObjectUpgradeMixin
+
+
+class SceneSeasonalObjectUpgradeMixin(SceneSeasonalObjectBaseMixin, SceneSpringObjectUpgradeMixin, SceneSummerObjectUpgradeMixin, SceneAutumnObjectUpgradeMixin, SceneWinterObjectUpgradeMixin):
+    pass

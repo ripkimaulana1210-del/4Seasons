@@ -5,6 +5,7 @@ import moderngl as mgl
 import numpy as np
 
 from ..core.paths import SHADER_DIR
+from ..systems.season_transition_manager import transition_effect_family
 
 
 class HUD:
@@ -137,7 +138,7 @@ class HUD:
         if season_controller.is_transitioning:
             transition = season_controller.transition_snapshot()
             season_progress = f"Transisi {season_controller.transition_progress * 100:0.0f}%"
-            if transition["pair"] == "winter->spring":
+            if transition_effect_family(transition["pair"]) == "winter->spring":
                 special_effect = (
                     f"Cair {transition['melt_intensity'] * 100:0.0f}% | "
                     f"Tunas {transition['sprout_intensity'] * 100:0.0f}% | "
@@ -235,8 +236,9 @@ class HUD:
             "Esc pause/resume | Q exit saat pause | Enter/Space skip intro",
             "W/A/S/D gerak | Q/E turun-naik | Mouse lihat | Shift cepat | Ctrl pelan",
             "Tab free/orbit | Mouse wheel zoom | ` mouse grab | C cinematic",
-            "1-4 pilih musim | N/P next-prev | T auto musim | X stop auto musim",
-            "Y auto hari | J/K geser jam | L malam | O pagi | +/- speed",
+            "1-4 utama | 5-0 micro | Shift+1-0/[ ] pilih | N/P next-prev",
+            "T auto musim | X stop auto musim | +/- speed",
+            "Y auto hari | J/K geser jam | L malam | O pagi",
             "M mute | H HUD | F1 preset musim | F2 screenshot",
             "F3 editor | F4 shadow (normal) / dump transform (editor)",
             "F5 sakura | F6 bridge | F7 village | F8 fuji",

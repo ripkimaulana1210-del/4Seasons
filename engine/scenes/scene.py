@@ -1,5 +1,6 @@
 import math
 
+from ..data.scene_config import SCENE_LAYOUT
 from ..models import (
     AtmosphereSunDisc,
     AuroraBand,
@@ -33,8 +34,10 @@ from ..models import (
     WaterSurface,
     WindStreak,
 )
+from ..scene_parts.buildings import SceneBuildingAdditionsMixin
 from ..scene_parts.environment import SceneEnvironmentMixin
 from ..scene_parts.garden import SceneGardenMixin
+from ..scene_parts.micro_seasons import SceneMicroSeasonMixin
 from ..scene_parts.object_upgrades import SceneObjectUpgradeMixin
 from ..scene_parts.season_upgrades import SceneSeasonUpgradeMixin
 from ..scene_parts.village import SceneVillageMixin
@@ -45,19 +48,54 @@ class Scene(
     SceneEnvironmentMixin,
     SceneVillageMixin,
     SceneObjectUpgradeMixin,
+    SceneBuildingAdditionsMixin,
+    SceneMicroSeasonMixin,
     SceneSeasonUpgradeMixin,
 ):
     def __init__(self, app):
         self.app = app
         transition = app.season_controller.transition_snapshot()
         self.season = transition["from"] if transition is not None else app.season_controller.current
+        self.layout = SCENE_LAYOUT
         self.objects = []
+        self.object_layer_counts = {}
+        self.object_tag_counts = {}
         self.load()
 
-    def add_object(self, obj):
+    def add_object(self, obj, tag=None, layer=None):
         if hasattr(self.app, "quality") and not self.app.quality.should_include(obj):
             return
+        obj.scene_tag = tag or self.infer_object_tag(obj)
+        obj.scene_layer = layer or self.infer_object_layer(obj)
+        self.object_tag_counts[obj.scene_tag] = self.object_tag_counts.get(obj.scene_tag, 0) + 1
+        self.object_layer_counts[obj.scene_layer] = self.object_layer_counts.get(obj.scene_layer, 0) + 1
         self.objects.append(obj)
+
+    def infer_object_tag(self, obj):
+        return obj.__class__.__name__
+
+    def infer_object_layer(self, obj):
+        name = obj.__class__.__name__.lower()
+        if "transition" in name:
+            return "transition_effect"
+        if any(key in name for key in ("water", "ice", "pond")):
+            return "water"
+        if any(key in name for key in ("rain", "drift", "wind", "firefly", "cloud", "aurora", "sun", "moon", "glow")):
+            return "atmosphere"
+        if any(key in name for key in ("sakura", "grass", "blossom", "petal")):
+            return "vegetation"
+        if any(key in name for key in ("roof", "house", "bridge", "gable")):
+            return "village"
+        return "scene"
+
+    def layer_summary(self):
+        return dict(sorted(self.object_layer_counts.items()))
+
+    def tag_summary(self):
+        return dict(sorted(self.object_tag_counts.items()))
+
+    def objects_by_layer(self, layer):
+        return [obj for obj in self.objects if getattr(obj, "scene_layer", None) == layer]
 
     def season_color(self, key, default):
         return self.season.get(key, default)
@@ -71,8 +109,10 @@ class Scene(
     def load(self):
         add = self.add_object
         app = self.app
-        pond_radius_scale = 5.55 / 4.80
-        island_radius_scale = 2.35 / 1.95
+        layout = self.layout
+        ground_layout = layout["ground"]
+        pond_radius_scale = layout["pond"]["radius_scale"]
+        island_radius_scale = layout["island"]["radius_scale"]
 
         self.add_sky(app)
 
@@ -80,22 +120,26 @@ class Scene(
         add(
             TexturedPlane(
                 app,
-                pos=(0, -0.055, 0),
-                scale=(21, 1, 21),
+                pos=ground_layout["pos"],
+                scale=ground_layout["scale"],
                 texture_name=self.season_value("ground_texture", "grass"),
                 tint=self.season_color("ground_color", (0.23, 0.33, 0.17)),
-                repeat=(18.0, 18.0),
-            )
+                repeat=ground_layout["repeat"],
+            ),
+            tag="ground",
+            layer="terrain",
         )
 
         # Kolam lingkaran di tengah. Sisanya tetap tanah dari ColorPlane di atas.
         add(
             WaterSurface(
                 app,
-                pos=(0, 0.0, 0),
+                pos=layout["pond"]["center"],
                 scale=(1.0, 1.0, 1.0),
                 color=self.season_color("water_color", (0.16, 0.38, 0.54)),
-            )
+            ),
+            tag="pond_water",
+            layer="water",
         )
 
         self.add_fuji_background(app)
@@ -103,34 +147,41 @@ class Scene(
         add(
             WaterReflection(
                 app,
-                pos=(0, 0.0, 0),
+                pos=layout["pond"]["center"],
                 scale=(1.0, 1.0, 1.0),
                 color=self.season_color("water_reflection_color", (0.96, 0.42, 0.70)),
-            )
+            ),
+            tag="pond_reflection",
+            layer="water",
         )
 
         # Pulau kecil lingkaran di tengah kolam untuk pohon sakura.
         add(
             IslandMound(
                 app,
-                pos=(0, 0.0, 0),
+                pos=layout["island"]["center"],
                 scale=(1.0, 1.0, 1.0),
                 color=self.season_color("island_mound_color", (0.25, 0.34, 0.16)),
-            )
+            ),
+            tag="island_mound",
+            layer="terrain",
         )
 
         add(
             IslandGrass(
                 app,
-                pos=(0, 0.0, 0),
+                pos=layout["island"]["center"],
                 scale=(1.0, 1.0, 1.0),
                 color=self.season_color("island_grass_color", (0.42, 0.56, 0.20)),
-            )
+            ),
+            tag="island_grass",
+            layer="vegetation",
         )
 
-        tree_pos = (0, 0.24, 0)
-        tree_rot = (0, 0, 0)
-        tree_scale = (1.28, 1.28, 1.28)
+        tree_layout = layout["sakura_tree"]
+        tree_pos = tree_layout["pos"]
+        tree_rot = tree_layout["rot"]
+        tree_scale = tree_layout["scale"]
 
         add(
             SakuraWood(
@@ -288,6 +339,8 @@ class Scene(
             self.add_pond_flowers(app, pond_radius_scale)
 
         self.add_object_upgrades(app, pond_radius_scale)
+        self.add_building_additions(app, pond_radius_scale)
+        self.add_micro_season_accents(app, pond_radius_scale)
         self.add_season_upgrades(app, pond_radius_scale)
 
         # Lentera batu kecil seperti taman Jepang di sisi kiri belakang.

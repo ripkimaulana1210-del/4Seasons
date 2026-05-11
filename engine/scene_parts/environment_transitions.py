@@ -8,6 +8,7 @@ from ..models import (
     TransitionDisc,
     WindStreak,
 )
+from ..systems.season_transition_manager import transition_effect_family
 
 
 class SceneTransitionEffectsMixin:
@@ -85,6 +86,7 @@ class SceneTransitionEffectsMixin:
     def add_transition_ground_blend(self, app, transition):
         add = self.add_object
         pair = transition["pair"]
+        family = transition_effect_family(pair)
         from_ground = transition["from"].get("ground_color", (0.46, 0.54, 0.42))
         to_ground = transition["to"].get("ground_color", (0.46, 0.54, 0.42))
         target_alpha = {
@@ -92,7 +94,7 @@ class SceneTransitionEffectsMixin:
             "spring->summer": 0.14,
             "summer->autumn": 0.18,
             "autumn->winter": 0.24,
-        }.get(pair, 0.14)
+        }.get(family, 0.14)
 
         # Color overlay fallback when real texture cross-fade is not available.
         for i, (x, z, scale_x, scale_z) in enumerate(
@@ -120,7 +122,7 @@ class SceneTransitionEffectsMixin:
                 )
             )
 
-        if pair == "winter->spring":
+        if family == "winter->spring":
             snow = transition["from"].get("winter_snow_color", (0.94, 0.97, 1.0))
             for i in range(18):
                 angle = math.radians(i * 360.0 / 18.0 + 9.0)
@@ -143,7 +145,7 @@ class SceneTransitionEffectsMixin:
                     )
                 )
 
-        elif pair == "autumn->winter":
+        elif family == "autumn->winter":
             frost = transition["to"].get("winter_snow_color", (0.94, 0.97, 1.0))
             for i in range(22):
                 angle = math.radians(i * 360.0 / 22.0)
@@ -167,7 +169,7 @@ class SceneTransitionEffectsMixin:
                 )
 
     def add_story_transition(self, app, transition):
-        pair = transition["pair"]
+        pair = transition_effect_family(transition["pair"])
 
         if pair == "spring->summer":
             self.add_spring_to_summer_heat(app, transition)

@@ -84,19 +84,75 @@ TEXTURE_KEYS = {
 }
 
 BOOLEAN_THRESHOLDS = {
+    "winter->early_spring": {
+        "garden_flowers_enabled": 0.70,
+        "pond_flowers_enabled": 0.82,
+        "floating_petals_enabled": 0.90,
+        "rain_enabled": 0.58,
+    },
+    "early_spring->spring": {
+        "garden_flowers_enabled": 0.28,
+        "pond_flowers_enabled": 0.38,
+        "floating_petals_enabled": 0.62,
+        "rain_enabled": 0.48,
+    },
     "winter->spring": {
         "garden_flowers_enabled": 0.35,
         "pond_flowers_enabled": 0.42,
         "floating_petals_enabled": 0.55,
         "rain_enabled": 0.50,
     },
+    "spring->hanami": {
+        "garden_flowers_enabled": 0.12,
+        "pond_flowers_enabled": 0.18,
+        "floating_petals_enabled": 0.42,
+        "rain_enabled": 0.74,
+    },
+    "hanami->tsuyu": {
+        "garden_flowers_enabled": 0.62,
+        "pond_flowers_enabled": 0.62,
+        "floating_petals_enabled": 0.52,
+        "rain_enabled": 0.44,
+    },
+    "tsuyu->summer": {
+        "rain_enabled": 0.42,
+        "floating_petals_enabled": 0.34,
+    },
     "spring->summer": {
         "rain_enabled": 0.40,
         "floating_petals_enabled": 0.62,
     },
+    "late_summer->autumn": {
+        "rain_enabled": 0.62,
+        "floating_petals_enabled": 0.36,
+    },
     "summer->autumn": {
         "rain_enabled": 0.60,
         "floating_petals_enabled": 0.35,
+    },
+    "momiji->first_frost": {
+        "garden_flowers_enabled": 0.58,
+        "pond_flowers_enabled": 0.52,
+        "floating_petals_enabled": 0.44,
+        "rain_enabled": 0.46,
+    },
+    "first_frost->winter": {
+        "garden_flowers_enabled": 0.54,
+        "pond_flowers_enabled": 0.48,
+        "floating_petals_enabled": 0.40,
+        "rain_enabled": 0.50,
+    },
+    "winter->deep_winter": {
+        "garden_flowers_enabled": 0.35,
+        "pond_flowers_enabled": 0.35,
+        "floating_petals_enabled": 0.35,
+        "rain_enabled": 0.60,
+    },
+    "first_frost->deep_winter": {
+        "garden_flowers_enabled": 0.42,
+        "pond_flowers_enabled": 0.38,
+        "floating_petals_enabled": 0.34,
+        "rain_enabled": 0.54,
     },
     "autumn->winter": {
         "garden_flowers_enabled": 0.66,
@@ -107,9 +163,23 @@ BOOLEAN_THRESHOLDS = {
 }
 
 TRANSITION_STORIES = {
+    "winter->early_spring": "Salju basah menipis, puddle muncul, dan tunas pertama keluar.",
+    "early_spring->spring": "Tanah dingin berubah hijau dan taman mulai kembali hidup.",
+    "spring->hanami": "Sakura mencapai full bloom, petal rain semakin padat.",
+    "hanami->tsuyu": "Kelopak turun ke tanah, awan hujan menutup langit.",
+    "tsuyu->summer": "Hujan mereda, udara menghangat, dan kolam mulai berkilau.",
     "spring->summer": "Petal rain mereda, udara memanas, dan kolam mulai berkilau.",
+    "summer->midsummer": "Panas memuncak, festival lantern dan fireflies menyala.",
+    "midsummer->late_summer": "Festival mereda, rumput mulai kering dan udara berdebu.",
+    "late_summer->autumn": "Warna hijau memudar menuju kuning-oranye awal gugur.",
     "summer->autumn": "Daun menguning, angin berputar, lalu taman tertutup leaf litter.",
+    "autumn->momiji": "Daun merah-oranye mencapai puncak dan menutup jalur taman.",
+    "momiji->first_frost": "Warna hangat memucat saat frost pertama menyentuh jalan.",
+    "first_frost->winter": "Frost pertama menebal menjadi snow cover yang lebih stabil.",
+    "winter->deep_winter": "Winter menjadi lebih sunyi, tebal, dan bercahaya aurora.",
+    "first_frost->deep_winter": "Frost berubah menjadi salju tebal dan malam aurora.",
     "autumn->winter": "First snow turun pelan, daun membeku, dan kolam mulai diam.",
+    "deep_winter->early_spring": "Es terdalam mulai retak dan air pertama kembali bergerak.",
     "winter->spring": "Es retak dan mencair, tunas tumbuh, lalu sakura kembali bermekaran.",
 }
 
@@ -127,6 +197,18 @@ EFFECT_INDEX = {
     "winter": 3.0,
 }
 
+TRANSITION_EFFECT_FAMILIES = {
+    "winter->early_spring": "winter->spring",
+    "early_spring->spring": "winter->spring",
+    "deep_winter->early_spring": "winter->spring",
+    "tsuyu->summer": "spring->summer",
+    "late_summer->autumn": "summer->autumn",
+    "momiji->first_frost": "autumn->winter",
+    "first_frost->winter": "autumn->winter",
+    "winter->deep_winter": "autumn->winter",
+    "first_frost->deep_winter": "autumn->winter",
+}
+
 
 def clamp(value, lower=0.0, upper=1.0):
     return max(lower, min(upper, value))
@@ -135,6 +217,10 @@ def clamp(value, lower=0.0, upper=1.0):
 def smoothstep(t):
     t = clamp(t)
     return t * t * (3.0 - 2.0 * t)
+
+
+def transition_effect_family(pair):
+    return TRANSITION_EFFECT_FAMILIES.get(pair, pair)
 
 
 def ease_in_out(t):
@@ -317,6 +403,7 @@ class SeasonTransitionManager:
         progress = self.progress
         eased = self.eased
         pair = self.pair
+        family = transition_effect_family(pair)
         return {
             "from": self.from_season,
             "to": self.to_season,
@@ -326,25 +413,25 @@ class SeasonTransitionManager:
             "blended": self.get_blended_season(self.to_season),
             "preset": self.preset_for_pair(pair),
             "timeline": self.timeline_items(progress, pair),
-            "heat_intensity": window_smooth(progress, 0.16, 0.86) if pair == "spring->summer" else 0.0,
-            "sparkle_intensity": window_smooth(progress, 0.36, 0.95) if pair == "spring->summer" else 0.0,
-            "firefly_intensity": window_smooth(progress, 0.55, 1.0) if pair == "spring->summer" else 0.0,
-            "petal_fade": 1.0 - window_smooth(progress, 0.10, 0.70) if pair == "spring->summer" else 0.0,
-            "wilt_intensity": window_smooth(progress, 0.14, 0.78) if pair == "summer->autumn" else 0.0,
-            "leaf_color_intensity": window_smooth(progress, 0.16, 0.72) if pair == "summer->autumn" else 0.0,
-            "leaf_fall_intensity": window_smooth(progress, 0.22, 0.92) if pair == "summer->autumn" else 0.0,
-            "wind_intensity": window_smooth(progress, 0.20, 0.88) if pair == "summer->autumn" else 0.0,
-            "cold_rain_intensity": window_smooth(progress, 0.60, 1.0) if pair == "summer->autumn" else 0.0,
-            "frost_intensity": window_smooth(progress, 0.24, 0.88) if pair == "autumn->winter" else 0.0,
-            "freeze_intensity": window_smooth(progress, 0.38, 0.96) if pair == "autumn->winter" else 0.0,
-            "snow_intensity": window_smooth(progress, 0.45, 1.0) if pair == "autumn->winter" else 0.0,
-            "first_snow_intensity": window_peak(progress, 0.42, 0.68, 1.0) if pair == "autumn->winter" else 0.0,
-            "melt_intensity": window_smooth(progress, 0.02, 0.64) if pair == "winter->spring" else 0.0,
-            "ice_crack_intensity": window_peak(progress, 0.12, 0.28, 0.52) if pair == "winter->spring" else 0.0,
-            "puddle_intensity": window_smooth(progress, 0.12, 0.72) if pair == "winter->spring" else 0.0,
-            "sprout_intensity": window_smooth(progress, 0.30, 0.80) if pair == "winter->spring" else 0.0,
-            "bloom_intensity": window_smooth(progress, 0.46, 0.94) if pair == "winter->spring" else 0.0,
-            "petal_intensity": window_smooth(progress, 0.55, 1.0) if pair == "winter->spring" else 0.0,
+            "heat_intensity": window_smooth(progress, 0.16, 0.86) if family == "spring->summer" else 0.0,
+            "sparkle_intensity": window_smooth(progress, 0.36, 0.95) if family == "spring->summer" else 0.0,
+            "firefly_intensity": window_smooth(progress, 0.55, 1.0) if family == "spring->summer" else 0.0,
+            "petal_fade": 1.0 - window_smooth(progress, 0.10, 0.70) if family == "spring->summer" else 0.0,
+            "wilt_intensity": window_smooth(progress, 0.14, 0.78) if family == "summer->autumn" else 0.0,
+            "leaf_color_intensity": window_smooth(progress, 0.16, 0.72) if family == "summer->autumn" else 0.0,
+            "leaf_fall_intensity": window_smooth(progress, 0.22, 0.92) if family == "summer->autumn" else 0.0,
+            "wind_intensity": window_smooth(progress, 0.20, 0.88) if family == "summer->autumn" else 0.0,
+            "cold_rain_intensity": window_smooth(progress, 0.60, 1.0) if family == "summer->autumn" else 0.0,
+            "frost_intensity": window_smooth(progress, 0.24, 0.88) if family == "autumn->winter" else 0.0,
+            "freeze_intensity": window_smooth(progress, 0.38, 0.96) if family == "autumn->winter" else 0.0,
+            "snow_intensity": window_smooth(progress, 0.45, 1.0) if family == "autumn->winter" else 0.0,
+            "first_snow_intensity": window_peak(progress, 0.42, 0.68, 1.0) if family == "autumn->winter" else 0.0,
+            "melt_intensity": window_smooth(progress, 0.02, 0.64) if family == "winter->spring" else 0.0,
+            "ice_crack_intensity": window_peak(progress, 0.12, 0.28, 0.52) if family == "winter->spring" else 0.0,
+            "puddle_intensity": window_smooth(progress, 0.12, 0.72) if family == "winter->spring" else 0.0,
+            "sprout_intensity": window_smooth(progress, 0.30, 0.80) if family == "winter->spring" else 0.0,
+            "bloom_intensity": window_smooth(progress, 0.46, 0.94) if family == "winter->spring" else 0.0,
+            "petal_intensity": window_smooth(progress, 0.55, 1.0) if family == "winter->spring" else 0.0,
             "story": TRANSITION_STORIES.get(pair, self.to_season.get("transition_phrase", "")),
         }
 

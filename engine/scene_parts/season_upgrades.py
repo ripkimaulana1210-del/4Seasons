@@ -1,6 +1,7 @@
 import math
 
 from ..models import ColorCube, ColorPlane, NightGlow, PondRock, SunDisc, TransitionCube, WindStreak
+from ..systems.season_transition_manager import transition_effect_family
 
 
 class SceneSeasonUpgradeMixin:
@@ -252,7 +253,7 @@ class SceneSeasonUpgradeMixin:
             return
 
         add = self.add_object
-        pair = transition["pair"]
+        pair = transition_effect_family(transition["pair"])
         if pair == "spring->summer":
             for i in range(14):
                 x = -8.0 + i * 1.25

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import importlib.util
 import json
 import sys
 from dataclasses import dataclass
@@ -14,6 +15,9 @@ ASSETS_DIR = ROOT_DIR / "assets"
 TEXTURE_DIR = ASSETS_DIR / "textures"
 SHADER_DIR = ASSETS_DIR / "shaders"
 AUDIO_DIR = ASSETS_DIR / "audio"
+
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
 
 
 @dataclass(frozen=True)
@@ -51,6 +55,25 @@ def literal_assignment(path: Path, name: str):
                 if isinstance(target, ast.Name) and target.id == name:
                     return ast.literal_eval(node.value)
     raise ValueError(f"{name} assignment not found in {path}")
+
+
+def module_assignment(path: Path, name: str):
+    module_name = f"engine.seasons.{path.stem}" if path.parent.name == "seasons" else "_asset_validation_" + path.stem
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    if spec is None or spec.loader is None:
+        raise ValueError(f"Cannot import {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    if not hasattr(module, name):
+        raise ValueError(f"{name} assignment not found in {path}")
+    return getattr(module, name)
+
+
+def read_assignment(path: Path, name: str):
+    try:
+        return literal_assignment(path, name)
+    except Exception:
+        return module_assignment(path, name)
 
 
 def parse_texture_defaults(root: Path):
@@ -107,7 +130,7 @@ def parse_shader_program_refs(root: Path):
 def load_seasons(root: Path):
     seasons = {}
     for path in sorted((root / "engine" / "seasons").glob("season_*.py")):
-        seasons[path] = literal_assignment(path, "SEASON")
+        seasons[path] = read_assignment(path, "SEASON")
     return seasons
 
 
