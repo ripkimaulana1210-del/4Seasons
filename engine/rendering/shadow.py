@@ -3,14 +3,14 @@ import math
 import moderngl as mgl
 from pyglm import glm
 
-from .model import (
+from ..models import (
     BaseModelColor,
     BaseModelEmissive,
     BaseModelEmissiveTexture,
     BaseModelTexture,
     SkyDome,
 )
-from .paths import SHADER_DIR
+from ..core.paths import SHADER_DIR
 
 
 class ShadowMapRenderer:

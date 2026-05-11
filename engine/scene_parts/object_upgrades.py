@@ -1,7 +1,7 @@
 import math
 
 from ..data.scene_config import HOUSE_SPECS
-from ..model import ColorCube, ColorPlane, FireflyGlow, NightGlow, PondRock, SunDisc, WindStreak
+from ..models import ColorCube, ColorPlane, FireflyGlow, NightGlow, PondRock, SunDisc, WindStreak
 
 
 class SceneObjectUpgradeMixin:

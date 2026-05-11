@@ -1,7 +1,7 @@
 import moderngl as mgl
 import pygame as pg
 
-from .paths import TEXTURE_DIR
+from ..core.paths import TEXTURE_DIR
 
 
 class TextureManager:

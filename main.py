@@ -1,4 +1,4 @@
-from engine.app import SxvxnEngine
+from engine.core.app import SxvxnEngine
 
 
 if __name__ == "__main__":

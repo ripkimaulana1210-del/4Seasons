@@ -2,11 +2,14 @@ from collections import defaultdict
 
 import numpy as np
 
-from .model import BaseModelColor, _write_fog_uniforms, _write_shadow_uniforms
-from .paths import SHADER_DIR
+from ..models import BaseModelEmissive, BaseModelEmissiveTexture
+from ..core.paths import SHADER_DIR
 
 
-class InstancedColorRenderer:
+class InstancedEmissiveRenderer:
+    """Batches static BaseModelEmissive objects (SunDisc, ContactShadow, etc.)
+    into instanced draw calls to reduce per-object overhead."""
+
     def __init__(self, app):
         self.app = app
         self.ctx = app.ctx
@@ -14,23 +17,26 @@ class InstancedColorRenderer:
         self.batches = {}
         self.scene_id = None
         self.objects_signature = None
-        self.default_program = app.mesh.vao.program.programs["default_color"]
+        self.default_program = app.mesh.vao.program.programs["emissive_color"]
 
     def load_program(self):
-        with open(SHADER_DIR / "instanced_color.vert", "r", encoding="utf-8") as file:
+        with open(SHADER_DIR / "instanced_emissive.vert", "r", encoding="utf-8") as file:
             vertex_shader = file.read()
-        with open(SHADER_DIR / "instanced_color.frag", "r", encoding="utf-8") as file:
+        with open(SHADER_DIR / "instanced_emissive.frag", "r", encoding="utf-8") as file:
             fragment_shader = file.read()
         return self.ctx.program(vertex_shader=vertex_shader, fragment_shader=fragment_shader)
 
     def is_eligible(self, obj):
-        if getattr(obj, "is_background", False):
+        if not isinstance(obj, BaseModelEmissive):
             return False
-        if not isinstance(obj, BaseModelColor):
+        if isinstance(obj, BaseModelEmissiveTexture):
+            return False
+        if getattr(obj, "is_background", False):
             return False
         if obj.program is not self.default_program:
             return False
-        return type(obj).update is BaseModelColor.update
+        # Only batch objects whose update() is the base implementation
+        return type(obj).update is BaseModelEmissive.update
 
     def split(self, objects):
         batched = []
@@ -60,6 +66,7 @@ class InstancedColorRenderer:
             for column in obj.m_model.to_list():
                 row.extend(column)
             row.extend([obj.color.x, obj.color.y, obj.color.z])
+            row.append(obj.alpha)
             rows.append(row)
 
         data = np.array(rows, dtype="f4")
@@ -71,32 +78,25 @@ class InstancedColorRenderer:
                 (vbo.vbo, vbo.format, *vbo.attribs),
                 (
                     instance_buffer,
-                    "4f 4f 4f 4f 3f /i",
+                    "4f 4f 4f 4f 3f 1f /i",
                     "in_model_col0",
                     "in_model_col1",
                     "in_model_col2",
                     "in_model_col3",
                     "in_instance_color",
+                    "in_instance_alpha",
                 ),
             ],
         )
         return {"vao": vao, "buffer": instance_buffer, "count": len(objects)}
 
     def write_common_uniforms(self):
-        light = self.app.light
         self.program["m_proj"].write(self.app.camera.m_proj)
         self.program["m_view"].write(self.app.camera.m_view)
-        self.program["cam_pos"].write(self.app.camera.position)
-        self.program["light.position"].write(light.position)
-        self.program["light.Ia"].write(light.Ia)
-        self.program["light.Id"].write(light.Id)
-        self.program["light.Is"].write(light.Is)
-        _write_fog_uniforms(self.program, self.app)
-        _write_shadow_uniforms(self.program, self.app)
 
     def render(self, scene, objects):
         if not objects:
-            return
+            return 0
         signature = tuple(id(obj) for obj in objects)
         if id(scene) != self.scene_id or signature != self.objects_signature:
             self.rebuild(scene, objects)

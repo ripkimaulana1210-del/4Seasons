@@ -94,19 +94,19 @@ docs/
 config/
   settings.json  Dibuat otomatis saat setting diubah.
 engine/
-  scene.py           Scene utama.
-  scene_parts/       Bagian scene: environment, garden, village.
-  model.py           Base model dan model renderable.
-  season_controller.py
-  scene_renderer.py
-  shadow.py
-  postprocess.py
-  camera.py
-  hud.py
-  editor.py
-  instancing.py
-  quality.py
-  settings.py
+  core/          App, camera, settings, paths, quality, light.
+  rendering/     VAO/VBO, texture, shader, shadow, postprocess, renderer.
+  systems/       Season controller, transition manager, audio manager.
+  ui/            HUD dan scene editor.
+  scenes/        Scene utama.
+  scene_parts/   Bagian scene: environment, garden, village.
+  models/        Base model dan model renderable.
+  seasons/       Konfigurasi musim.
+  data/          Konfigurasi scene dan preset.
+  geometry/      Mesh/procedural geometry.
+  app.py         Compatibility import kecil.
+  scene.py       Compatibility import kecil.
+  model.py       Compatibility import kecil.
 tools/
   assets/       Generate dan optimasi texture.
   audio/        Placeholder dan manifest audio musiman.

@@ -1,7 +1,7 @@
 import math
 
 from ..data.scene_config import POND_FENCE_ARCS
-from ..model import (
+from ..models import (
     AtmosphereSunDisc,
     AuroraBand,
     CloudLayer,

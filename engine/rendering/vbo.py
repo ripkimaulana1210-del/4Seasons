@@ -2,7 +2,7 @@ import math
 
 import numpy as np
 
-from .geometry.environment_geometry import (
+from ..geometry.environment_geometry import (
     generate_floating_petal_data,
     generate_fuji_peak_data,
     generate_fuji_snowcap_data,
@@ -14,7 +14,7 @@ from .geometry.environment_geometry import (
     generate_water_reflection_data,
     generate_water_surface_data,
 )
-from .geometry.sakura_geometry import (
+from ..geometry.sakura_geometry import (
     generate_sakura_blossom_data,
     generate_sakura_canopy_fill_data,
     generate_sakura_wood_data,

@@ -4,7 +4,7 @@ import pygame as pg
 import moderngl as mgl
 import numpy as np
 
-from .paths import SHADER_DIR
+from ..core.paths import SHADER_DIR
 
 
 class HUD:

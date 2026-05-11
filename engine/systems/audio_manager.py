@@ -4,7 +4,7 @@ import math
 import numpy as np
 import pygame as pg
 
-from .paths import PROJECT_DIR
+from ..core.paths import PROJECT_DIR
 
 
 class AudioManager:

@@ -2,8 +2,8 @@ from collections import defaultdict
 
 import numpy as np
 
-from .model import BaseModelTexture, _write_fog_uniforms, _write_shadow_uniforms
-from .paths import SHADER_DIR
+from ..models import BaseModelTexture, _write_fog_uniforms, _write_shadow_uniforms
+from ..core.paths import SHADER_DIR
 
 
 class InstancedTextureRenderer:

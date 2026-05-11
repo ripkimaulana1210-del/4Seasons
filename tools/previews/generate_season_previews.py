@@ -7,9 +7,9 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from engine.app import SxvxnEngine
-from engine.paths import SCREENSHOT_DIR
-from engine.season_controller import SEASONS
+from engine.core.app import SxvxnEngine
+from engine.core.paths import SCREENSHOT_DIR
+from engine.systems.season_controller import SEASONS
 
 
 PREVIEW_TIMES = {

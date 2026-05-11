@@ -1,6 +1,6 @@
 import math
 
-from ..model import ColorCube, ColorPlane, NightGlow, PondRock, SunDisc, TransitionCube, WindStreak
+from ..models import ColorCube, ColorPlane, NightGlow, PondRock, SunDisc, TransitionCube, WindStreak
 
 
 class SceneSeasonUpgradeMixin:

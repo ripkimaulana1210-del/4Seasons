@@ -1,4 +1,4 @@
-from .paths import SHADER_DIR
+from ..core.paths import SHADER_DIR
 
 
 class ShaderProgram:

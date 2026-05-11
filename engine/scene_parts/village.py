@@ -1,7 +1,7 @@
 import math
 
 from ..data.scene_config import HOUSE_SPECS
-from ..model import (
+from ..models import (
     AtmosphereSunDisc,
     AuroraBand,
     CloudLayer,

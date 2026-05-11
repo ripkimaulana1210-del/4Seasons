@@ -54,7 +54,7 @@ def literal_assignment(path: Path, name: str):
 
 
 def parse_texture_defaults(root: Path):
-    texture_file = root / "engine" / "texture.py"
+    texture_file = root / "engine" / "rendering" / "texture.py"
     tree = parse_python(texture_file)
     for node in ast.walk(tree):
         if isinstance(node, ast.Assign):
@@ -69,7 +69,7 @@ def parse_texture_defaults(root: Path):
 
 
 def parse_shader_programs(root: Path):
-    shader_file = root / "engine" / "shader_program.py"
+    shader_file = root / "engine" / "rendering" / "shader_program.py"
     tree = parse_python(shader_file)
     programs = set()
     for node in ast.walk(tree):
@@ -86,7 +86,7 @@ def parse_shader_programs(root: Path):
 
 
 def parse_shader_program_refs(root: Path):
-    vao_file = root / "engine" / "vao.py"
+    vao_file = root / "engine" / "rendering" / "vao.py"
     tree = parse_python(vao_file)
     refs = set()
     for node in ast.walk(tree):
@@ -263,7 +263,7 @@ def validate(root: Path, strict: bool):
                 "error",
                 "shaders",
                 f"VAO references shader program '{ref}' but ShaderProgram does not load it",
-                "engine/vao.py",
+                "engine/rendering/vao.py",
             )
         )
 
@@ -273,7 +273,7 @@ def validate(root: Path, strict: bool):
                 "warning",
                 "shaders",
                 f"Shader program '{program}' is loaded but not referenced by VAO",
-                "engine/shader_program.py",
+                "engine/rendering/shader_program.py",
             )
         )
 

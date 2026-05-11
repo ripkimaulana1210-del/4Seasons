@@ -3,7 +3,7 @@ import math
 from pyglm import glm
 import pygame as pg
 
-from .data.scene_config import CAMERA_PRESETS, TRANSITION_PRESETS
+from ..data.scene_config import CAMERA_PRESETS, TRANSITION_PRESETS
 
 FOV = 62
 NEAR = 0.1

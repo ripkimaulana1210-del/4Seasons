@@ -1,6 +1,6 @@
 import math
 
-from .model import (
+from ..models import (
     BaseModelColor,
     BaseModelEmissive,
     BaseModelEmissiveTexture,

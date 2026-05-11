@@ -1,6 +1,6 @@
 import pygame as pg
 
-from .model import (
+from ..models import (
     BaseModelEmissive,
     BaseModelEmissiveTexture,
     FireflyGlow,

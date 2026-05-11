@@ -1,5 +1,5 @@
-from .data.scene_config import QUALITY_PROFILES
-from .model import ContactShadow, DriftParticle, FireflyGlow, NightGlow, PondRock, RainDrop, WindStreak
+from ..data.scene_config import QUALITY_PROFILES
+from ..models import ContactShadow, DriftParticle, FireflyGlow, NightGlow, PondRock, RainDrop, WindStreak
 
 
 class QualityManager:
