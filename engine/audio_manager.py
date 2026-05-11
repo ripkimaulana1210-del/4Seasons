@@ -14,7 +14,9 @@ class AudioManager:
         self.current_path = None
         self.current_ambience = None
         self.ambience_channel = None
+        self.cue_channel = None
         self.ambience_sounds = {}
+        self.transition_cues = {}
         self.status = "Audio OFF"
 
         try:
@@ -22,6 +24,7 @@ class AudioManager:
                 pg.mixer.init()
             self.enabled = True
             self.ambience_channel = pg.mixer.Channel(1)
+            self.cue_channel = pg.mixer.Channel(2)
             self.status = "Muted" if self.muted else "Audio siap"
         except pg.error:
             self.status = "Audio device tidak aktif"
@@ -95,6 +98,72 @@ class AudioManager:
             samples = np.column_stack((samples, samples))
         return pg.sndarray.make_sound(samples)
 
+    def generate_transition_cue(self, kind):
+        mixer = pg.mixer.get_init()
+        if mixer is None:
+            return None
+
+        frequency, _, channels = mixer
+        duration = 1.15
+        count = int(frequency * duration)
+        t = np.linspace(0.0, duration, count, endpoint=False)
+        rng = np.random.default_rng(
+            {
+                "thaw": 101,
+                "heat": 113,
+                "leaves": 127,
+                "snow": 149,
+            }.get(kind, 173)
+        )
+        envelope = np.sin(np.linspace(0.0, math.pi, count)) ** 2
+        noise = rng.normal(0.0, 0.035, count)
+
+        if kind == "thaw":
+            crack = np.zeros(count)
+            for offset in (0.08, 0.18, 0.31):
+                start = int(offset * frequency)
+                length = min(count - start, int(0.045 * frequency))
+                burst_env = np.linspace(1.0, 0.0, length) ** 2
+                crack[start:start + length] += rng.normal(0.0, 0.28, length) * burst_env
+            drip = np.sin(2.0 * math.pi * 820.0 * t) * np.exp(-t * 2.8) * 0.12
+            wave = crack + drip + noise * envelope * 0.25
+        elif kind == "heat":
+            shimmer = np.sin(2.0 * math.pi * (420.0 + 90.0 * np.sin(t * 8.0)) * t) * 0.055
+            wave = shimmer * envelope + noise * 0.16
+        elif kind == "leaves":
+            rustle = noise * (0.30 + 0.70 * np.sin(2.0 * math.pi * 4.0 * t) ** 2)
+            low = np.sin(2.0 * math.pi * 92.0 * t) * 0.035
+            wave = (rustle + low) * envelope
+        elif kind == "snow":
+            wind = np.sin(2.0 * math.pi * 70.0 * t) * 0.040 + noise * 0.20
+            bell = np.sin(2.0 * math.pi * 960.0 * t) * np.exp(-t * 3.4) * 0.055
+            wave = (wind + bell) * envelope
+        else:
+            wave = noise * envelope * 0.20
+
+        peak = max(0.001, float(np.max(np.abs(wave))))
+        samples = np.clip(wave / peak * 0.42, -1.0, 1.0)
+        samples = (samples * 32767).astype(np.int16)
+        if channels == 2:
+            samples = np.column_stack((samples, samples))
+        return pg.sndarray.make_sound(samples)
+
+    def play_transition_cue(self, pair, kind="blend"):
+        if not self.enabled or self.muted or self.cue_channel is None:
+            return False
+
+        cue_key = f"{pair}:{kind}"
+        sound = self.transition_cues.get(cue_key)
+        if sound is None:
+            sound = self.generate_transition_cue(kind)
+            if sound is None:
+                return False
+            self.transition_cues[cue_key] = sound
+
+        self.cue_channel.play(sound)
+        self.cue_channel.set_volume(0.36)
+        return True
+
     def start_ambience(self, season):
         if not self.enabled or self.ambience_channel is None:
             return False
@@ -164,6 +233,8 @@ class AudioManager:
     def stop(self, fade_ms=800):
         self.stop_music(fade_ms)
         self.stop_ambience(fade_ms)
+        if self.cue_channel is not None:
+            self.cue_channel.fadeout(fade_ms)
 
     def stop_music(self, fade_ms=800):
         if self.enabled and pg.mixer.get_init():

@@ -9,9 +9,12 @@ struct Light {
 
 uniform Light light;
 uniform sampler2D u_texture;
+uniform sampler2D u_texture_next;
 uniform vec3 cam_pos;
 uniform vec3 u_tint;
+uniform vec3 u_blend_tint;
 uniform float u_alpha;
+uniform float u_texture_blend;
 uniform vec3 u_fog_color;
 uniform float u_fog_density;
 uniform float u_fog_start;
@@ -71,7 +74,11 @@ float shadow_factor(vec3 N, vec3 L) {
 
 void main() {
     vec4 texel = texture(u_texture, uv);
-    vec3 base_color = texel.rgb * u_tint;
+    vec4 next_texel = texture(u_texture_next, uv);
+    vec3 source_color = texel.rgb * u_tint;
+    vec3 target_color = next_texel.rgb * u_blend_tint;
+    vec3 base_color = mix(source_color, target_color, clamp(u_texture_blend, 0.0, 1.0));
+    float base_alpha = mix(texel.a, next_texel.a, clamp(u_texture_blend, 0.0, 1.0));
 
     vec3 N = normalize(normal);
     vec3 L = normalize(light.position - frag_pos);
@@ -89,5 +96,5 @@ void main() {
     vec3 specular = light.Is * spec;
     float shadow = shadow_factor(N, L);
 
-    fragColor = vec4(apply_fog(ambient + (diffuse + specular) * shadow, frag_pos), texel.a * u_alpha);
+    fragColor = vec4(apply_fog(ambient + (diffuse + specular) * shadow, frag_pos), base_alpha * u_alpha);
 }

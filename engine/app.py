@@ -327,6 +327,7 @@ class SxvxnEngine:
         self.post_processor.begin()
         self.ctx.clear(color=self.background_color)
         self.scene_renderer.render()
+        self.season_controller.render_transition_effects()
         self.post_processor.render()
         if self.hud_visible:
             self.hud.render()

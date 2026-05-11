@@ -1,6 +1,6 @@
 # Season Preview Gallery
 
-Generated from the current OpenGL scene using `python tools\generate_season_previews.py`.
+Generated from the current OpenGL scene using `python tools\previews\generate_season_previews.py`.
 
 ## Spring
 

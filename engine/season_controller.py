@@ -5,6 +5,7 @@ from .seasons.season_autumn import SEASON as AUTUMN
 from .seasons.season_spring import SEASON as SPRING
 from .seasons.season_summer import SEASON as SUMMER
 from .seasons.season_winter import SEASON as WINTER
+from .season_transition_manager import SeasonTransitionManager
 
 
 SEASONS = [SPRING, SUMMER, AUTUMN, WINTER]
@@ -14,7 +15,7 @@ TRANSITION_STORIES = {
     "spring->summer": "Gelombang panas: udara naik cepat, cahaya makin terik.",
     "summer->autumn": "Daun mulai layu, menguning, lalu berguguran.",
     "autumn->winter": "Udara membeku, salju pertama turun sedikit demi sedikit.",
-    "winter->spring": "Es dan salju mencair, lalu taman kembali bermekaran.",
+    "winter->spring": "Es retak dan mencair, tunas tumbuh, lalu taman kembali bermekaran.",
 }
 
 SKY_DEFAULTS = {
@@ -40,6 +41,12 @@ def clamp(value, lower=0.0, upper=1.0):
 def smoothstep(value):
     value = clamp(value)
     return value * value * (3.0 - 2.0 * value)
+
+
+def window_smooth(progress, start, end):
+    if end <= start:
+        return 1.0 if progress >= end else 0.0
+    return smoothstep((progress - start) / (end - start))
 
 
 def lerp(a, b, amount):
@@ -71,7 +78,8 @@ class SeasonController:
         self.day_time = 0.34
         self.day_duration = 72.0
         self.day_cycle_enabled = True
-        self.transition_duration = 4.5
+        self.transition_manager = SeasonTransitionManager(default_duration=8.0)
+        self.transition_duration = 8.0
         self.transition_elapsed = 0.0
         self.transition_from = None
         self.transition_to = None
@@ -85,35 +93,56 @@ class SeasonController:
         return SEASONS[self.current_index]
 
     @property
+    def transition_duration(self):
+        return self.transition_manager.duration
+
+    @transition_duration.setter
+    def transition_duration(self, value):
+        self.transition_manager.duration = max(0.25, float(value))
+
+    @property
+    def transition_elapsed(self):
+        return self.transition_manager.elapsed
+
+    @transition_elapsed.setter
+    def transition_elapsed(self, value):
+        self.transition_manager.elapsed = max(0.0, float(value))
+
+    @property
+    def transition_from(self):
+        return self.transition_manager.from_season
+
+    @transition_from.setter
+    def transition_from(self, value):
+        self.transition_manager.from_season = value
+
+    @property
+    def transition_to(self):
+        return self.transition_manager.to_season
+
+    @transition_to.setter
+    def transition_to(self, value):
+        self.transition_manager.to_season = value
+
+    @property
     def is_transitioning(self):
-        return self.transition_from is not None and self.transition_to is not None
+        return self.transition_manager.is_active
 
     @property
     def transition_progress(self):
-        if not self.is_transitioning:
-            return 1.0
-        return max(0.0, min(1.0, self.transition_elapsed / self.transition_duration))
+        return self.transition_manager.progress
 
     def transition_snapshot(self):
-        if not self.is_transitioning:
-            return None
-        progress = self.transition_progress
-        eased = 0.5 - 0.5 * math.cos(progress * math.pi)
-        pair = f"{self.transition_from['id']}->{self.transition_to['id']}"
-        return {
-            "from": self.transition_from,
-            "to": self.transition_to,
-            "pair": pair,
-            "progress": progress,
-            "eased": eased,
-            "heat_intensity": smoothstep(progress) if pair == "spring->summer" else 0.0,
-            "wilt_intensity": smoothstep(progress) if pair == "summer->autumn" else 0.0,
-            "leaf_fall_intensity": smoothstep(progress) if pair == "summer->autumn" else 0.0,
-            "snow_intensity": smoothstep(progress) if pair == "autumn->winter" else 0.0,
-            "melt_intensity": smoothstep(progress) if pair == "winter->spring" else 0.0,
-            "bloom_intensity": smoothstep(progress) if pair == "winter->spring" else 0.0,
-            "story": TRANSITION_STORIES.get(pair, self.transition_to.get("transition_phrase", "")),
-        }
+        return self.transition_manager.snapshot()
+
+    def get_blended_season(self):
+        return self.transition_manager.get_blended_season(self.current)
+
+    def season_effect_index(self):
+        return self.transition_manager.effect_index(self.current)
+
+    def render_transition_effects(self):
+        return self.transition_manager.render_transition_effects(self.app)
 
     def calculate_temperature(self):
         if self.is_transitioning:
@@ -151,31 +180,10 @@ class SeasonController:
         return season.get(key, SKY_DEFAULTS[key])
 
     def blended_season_setting(self, key):
-        transition = self.transition_snapshot()
-        if transition is None:
-            return self.season_setting(self.current, key)
-
-        start = self.season_setting(transition["from"], key)
-        end = self.season_setting(transition["to"], key)
-        amount = transition["eased"]
-        if isinstance(start, tuple):
-            return blend_color(start, end, amount)
-        return lerp(start, end, amount)
+        return self.season_setting(self.get_blended_season(), key)
 
     def seasonal_effect_visibility(self, effect_name):
-        transition = self.transition_snapshot()
-        if transition is None:
-            return 1.0 if self.current.get("seasonal_effect") == effect_name else 0.0
-
-        from_match = transition["from"].get("seasonal_effect") == effect_name
-        to_match = transition["to"].get("seasonal_effect") == effect_name
-        if from_match and to_match:
-            return 1.0
-        if from_match:
-            return 1.0 - transition["eased"]
-        if to_match:
-            return transition["eased"]
-        return 0.0
+        return self.transition_manager.visibility(effect_name, self.current)
 
     def day_state(self):
         phase = self.day_time % 1.0
@@ -230,6 +238,7 @@ class SeasonController:
         cloud_color = self.blended_season_setting("cloud_color")
         cloud_density = self.blended_season_setting("cloud_density")
         fog_bonus = self.blended_season_setting("fog_density_bonus")
+        blended_season = self.get_blended_season()
         summer_clarity = self.seasonal_effect_visibility("summer") * (1.0 - cloud_density * 0.20)
         winter = self.seasonal_effect_visibility("winter")
         autumn = self.seasonal_effect_visibility("autumn")
@@ -256,23 +265,11 @@ class SeasonController:
             -24.0,
         )
 
-        base_light_color = self.current["light_color"]
-        if self.is_transitioning:
-            base_light_color = blend_color(
-                self.transition_from["light_color"],
-                self.transition_to["light_color"],
-                self.transition_snapshot()["eased"],
-            )
+        base_light_color = blended_season["light_color"]
         moon_light = self.blended_season_setting("moon_light_color")
         light_color = blend_color(base_light_color, moon_light, night * 0.72)
 
-        base_intensity = self.current["light_intensity"]
-        if self.is_transitioning:
-            base_intensity = lerp(
-                self.transition_from["light_intensity"],
-                self.transition_to["light_intensity"],
-                self.transition_snapshot()["eased"],
-            )
+        base_intensity = blended_season["light_intensity"]
         light_intensity = max(0.30, base_intensity * (0.36 + daylight * 0.82) + dusk * 0.12)
         fog_density = max(
             0.015,
@@ -282,7 +279,7 @@ class SeasonController:
         fog_end = lerp(64.0, 42.0, min(1.0, winter + cloud_density * 0.35))
         fog_color = blend_color(
             blend_color(horizon, self.blended_season_setting("night_fog_color"), night * 0.55),
-            self.current.get("winter_snow_shadow_color", (0.78, 0.86, 0.92)),
+            blended_season.get("winter_snow_shadow_color", (0.78, 0.86, 0.92)),
             winter * 0.35,
         )
 
@@ -297,8 +294,8 @@ class SeasonController:
             "light_intensity": light_intensity,
             "sun_position": sun_position,
             "sun_alpha": smoothstep(inverse_lerp(-0.08, 0.24, day["sun_height"])),
-            "sun_color": blend_color(self.current.get("sun_color", (1.0, 0.78, 0.22)), dusk_horizon, dusk * 0.45),
-            "sun_ray_color": blend_color(self.current.get("sun_ray_color", (1.0, 0.70, 0.18)), dusk_horizon, dusk * 0.52),
+            "sun_color": blend_color(blended_season.get("sun_color", (1.0, 0.78, 0.22)), dusk_horizon, dusk * 0.45),
+            "sun_ray_color": blend_color(blended_season.get("sun_ray_color", (1.0, 0.70, 0.18)), dusk_horizon, dusk * 0.52),
             "moon_position": moon_position,
             "moon_alpha": smoothstep(night),
             "moon_color": self.blended_season_setting("moon_light_color"),
@@ -309,7 +306,7 @@ class SeasonController:
             "cloud_density": cloud_density,
             "cloud_alpha": cloud_density * (0.28 + daylight * 0.48 + night * 0.22),
             "night_fog_color": self.blended_season_setting("night_fog_color"),
-            "aurora_alpha": night * self.current.get("aurora_intensity", 0.0),
+            "aurora_alpha": night * blended_season.get("aurora_intensity", 0.0),
             "fog_color": fog_color,
             "fog_density": fog_density,
             "fog_start": fog_start,
@@ -336,21 +333,47 @@ class SeasonController:
     def set_season(self, index):
         index %= len(SEASONS)
         if index == self.current_index:
+            self.transition_manager.reset()
             self.elapsed = 0.0
             self.temperature_c = self.calculate_temperature()
-            self.app.audio.apply_season(self.current)
+            self.app.apply_season()
             self.update_caption(force=True)
             return
 
         previous = self.current
         self.current_index = index
-        self.transition_from = previous
-        self.transition_to = self.current
-        self.transition_elapsed = 0.0
+        self.transition_manager.start_transition(previous, self.current, duration=None)
+        self.on_transition_started()
         self.elapsed = 0.0
         self.temperature_c = self.calculate_temperature()
         self.app.apply_season()
         self.update_caption(force=True)
+
+    def start_transition(self, from_season, to_season, duration=None):
+        from_index = SEASONS.index(from_season)
+        to_index = SEASONS.index(to_season)
+        self.current_index = to_index
+        self.transition_manager.start_transition(SEASONS[from_index], SEASONS[to_index], duration=duration)
+        self.on_transition_started()
+        self.elapsed = 0.0
+        self.temperature_c = self.calculate_temperature()
+        self.app.apply_season()
+        self.update_caption(force=True)
+
+    def start_transition_by_id(self, from_id, to_id, duration=None):
+        by_id = {season["id"]: season for season in SEASONS}
+        if from_id not in by_id or to_id not in by_id:
+            return
+        self.start_transition(by_id[from_id], by_id[to_id], duration=duration)
+
+    def on_transition_started(self):
+        snapshot = self.transition_snapshot()
+        if snapshot is None:
+            return
+        pair = snapshot["pair"]
+        preset = snapshot.get("preset", {})
+        if hasattr(self.app, "audio"):
+            self.app.audio.play_transition_cue(pair, preset.get("audio_cue", "blend"))
 
     def next_season(self):
         self.set_season(self.current_index + 1)
@@ -389,14 +412,15 @@ class SeasonController:
         self.update_caption(force=True)
 
     def handle_key(self, key):
+        direct_select = bool(pg.key.get_mods() & (pg.KMOD_SHIFT | pg.KMOD_CTRL))
         if key == pg.K_1:
-            self.set_season(0)
+            self.set_season(0) if direct_select else self.start_transition_by_id("winter", "spring")
         elif key == pg.K_2:
-            self.set_season(1)
+            self.set_season(1) if direct_select else self.start_transition_by_id("spring", "summer")
         elif key == pg.K_3:
-            self.set_season(2)
+            self.set_season(2) if direct_select else self.start_transition_by_id("summer", "autumn")
         elif key == pg.K_4:
-            self.set_season(3)
+            self.set_season(3) if direct_select else self.start_transition_by_id("autumn", "winter")
         elif key == pg.K_t:
             self.toggle_time_lapse()
         elif key == pg.K_x:
@@ -430,11 +454,7 @@ class SeasonController:
         self.update_day_cycle(delta_s)
 
         if self.is_transitioning:
-            self.transition_elapsed += delta_s
-            if self.transition_elapsed >= self.transition_duration:
-                self.transition_from = None
-                self.transition_to = None
-                self.transition_elapsed = 0.0
+            if self.transition_manager.update(delta_s):
                 self.app.apply_season()
 
             self.temperature_c = self.calculate_temperature()
@@ -467,11 +487,12 @@ class SeasonController:
         clock_hour = int((self.day_time * 24.0) % 24.0)
         clock_minute = int(((self.day_time * 24.0) % 1.0) * 60.0)
         period = "Malam" if day_state["night"] > 0.55 else "Senja/Pagi" if day_state["dusk"] > 0.45 else "Siang"
-        weather = self.current.get(
+        season = self.get_blended_season()
+        weather = season.get(
             "weather_label",
-            "Hujan" if self.current.get("rain_enabled", False) else "Cerah",
+            "Hujan" if season.get("rain_enabled", False) else "Cerah",
         )
-        wind = self.current.get("wind_strength", 0.0)
+        wind = season.get("wind_strength", 0.0)
         audio_status = self.app.audio.status
         emotion = (
             f"{self.current.get('life_stage', '')}: "
@@ -495,7 +516,8 @@ class SeasonController:
             f"Time-lapse {mode} ({self.season_duration:0.1f}s/musim)"
             f" | {period} {clock_hour:02d}:{clock_minute:02d} Day-cycle {day_mode}"
             f"{transition} | "
-            "1-4 musim, T auto musim, X stop auto musim, Y auto hari, J/K jam, L malam, O pagi, N/P geser, "
+            "1-4 transisi debug, Shift+1-4 pilih musim, T auto musim, X stop auto musim, "
+            "Y auto hari, J/K jam, L malam, O pagi, N/P geser, "
             "M mute, H HUD, +/- speed, F1 kamera musim, F2 screenshot, F5-F8 kamera, F9 quality, "
             "C cinematic, F11 fullscreen, Esc pause"
         )

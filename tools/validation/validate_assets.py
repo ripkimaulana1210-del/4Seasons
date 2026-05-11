@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-ROOT_DIR = Path(__file__).resolve().parents[1]
+ROOT_DIR = Path(__file__).resolve().parents[2]
 ENGINE_DIR = ROOT_DIR / "engine"
 ASSETS_DIR = ROOT_DIR / "assets"
 TEXTURE_DIR = ASSETS_DIR / "textures"

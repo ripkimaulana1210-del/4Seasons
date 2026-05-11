@@ -73,8 +73,8 @@ class PostProcessor:
             1.0 / max(1, self.app.WIN_SIZE[0]),
             1.0 / max(1, self.app.WIN_SIZE[1]),
         )
-        effect = self.app.season_controller.current.get("seasonal_effect", "spring")
-        season = self.app.season_controller.current
+        season = self.app.season_controller.get_blended_season()
+        effect = season.get("seasonal_effect", "spring")
         temperature_grade = season.get(
             "post_temperature_grade",
             {

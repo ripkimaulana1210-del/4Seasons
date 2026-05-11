@@ -9,7 +9,7 @@ if not exist ".venv\Scripts\python.exe" (
 call ".venv\Scripts\activate.bat"
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
-python tools\validate_assets.py
+python tools\validation\validate_assets.py
 
 echo.
 echo Setup selesai. Jalankan scripts\windows\run.bat atau python main.py untuk membuka project.

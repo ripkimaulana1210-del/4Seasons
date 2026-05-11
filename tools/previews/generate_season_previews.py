@@ -3,7 +3,7 @@ import sys
 
 import pygame as pg
 
-ROOT_DIR = Path(__file__).resolve().parents[1]
+ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
@@ -32,7 +32,7 @@ def write_gallery(paths):
     lines = [
         "# Season Preview Gallery",
         "",
-        "Generated from the current OpenGL scene using `python tools\\generate_season_previews.py`.",
+        "Generated from the current OpenGL scene using `python tools\\previews\\generate_season_previews.py`.",
         "",
     ]
     for season_id, image_path in paths:

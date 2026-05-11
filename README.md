@@ -47,7 +47,8 @@ scripts\windows\run.bat
 | `Ctrl` | Gerak lebih pelan |
 | `Tab` | Toggle free camera / orbit camera |
 | `Mouse wheel` | Zoom orbit camera |
-| `1-4` | Pilih musim |
+| `1-4` | Debug transisi visual: Winter->Spring, Spring->Summer, Summer->Autumn, Autumn->Winter |
+| `Shift + 1-4` | Pilih musim langsung |
 | `N / P` | Musim berikutnya / sebelumnya |
 | `T` | Toggle time-lapse musim |
 | `Y` | Toggle siklus hari |
@@ -107,9 +108,10 @@ engine/
   quality.py
   settings.py
 tools/
-  validate_assets.py
-  generate_textures.py
-  optimize_textures.py
+  assets/       Generate dan optimasi texture.
+  audio/        Placeholder dan manifest audio musiman.
+  previews/     Generate preview gallery musim.
+  validation/   Validasi asset, shader, season, dan audio.
 scripts/
   windows/      Helper setup, run, dan build Windows.
 main.py
@@ -120,13 +122,13 @@ requirements.txt
 
 ```powershell
 python -m compileall -q main.py engine tools
-python tools\validate_assets.py
+python tools\validation\validate_assets.py
 ```
 
-`tools/validate_assets.py` mengecek texture, shader, season config, dan referensi audio agar asset tidak putus.
+`tools/validation/validate_assets.py` mengecek texture, shader, season config, dan referensi audio agar asset tidak putus.
 
 Generate preview gallery empat musim:
 
 ```powershell
-python tools\generate_season_previews.py
+python tools\previews\generate_season_previews.py
 ```

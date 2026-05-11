@@ -162,7 +162,7 @@ class BaseModelColor:
             _set_uniform_value(
                 self.program,
                 "u_wind_strength",
-                self.app.season_controller.current.get("wind_strength", 0.7),
+                self.app.season_controller.get_blended_season().get("wind_strength", 0.7),
             )
 
     def write_per_object_uniforms(self):
@@ -322,7 +322,7 @@ class NightGlow(SunDisc):
     def update(self):
         atmosphere = self.app.season_controller.atmosphere_state()
         glow = max(atmosphere["night"], atmosphere["dusk"] * 0.62)
-        glow *= self.app.season_controller.current.get("lantern_glow_boost", 1.0)
+        glow *= self.app.season_controller.get_blended_season().get("lantern_glow_boost", 1.0)
         flicker = 1.0 + self.pulse * math.sin(self.app.time * 4.2 + self.pos.x * 0.7 + self.pos.z * 0.3)
         self.alpha = self.base_alpha * glow * flicker
         self.color = self.base_color
@@ -409,11 +409,13 @@ class BaseModelTexture:
         self.vao = app.mesh.vao.vaos[vao_name]
         self.program = self.vao.program
         self.texture = app.mesh.texture.get(texture_name)
+        self.texture_name = texture_name
 
         self.pos = glm.vec3(pos)
         self.rot = glm.vec3([glm.radians(a) for a in rot])
         self.scale = glm.vec3(scale)
         self.tint = glm.vec3(tint)
+        self.base_tint = glm.vec3(tint)
         self.repeat = glm.vec2(repeat)
         self.alpha = alpha
 
@@ -427,6 +429,7 @@ class BaseModelTexture:
         self.program["light.Id"].write(self.light.Id)
         self.program["light.Is"].write(self.light.Is)
         self.program["u_texture"].value = 0
+        _set_uniform_value(self.program, "u_texture_next", 2)
 
     def get_model_matrix(self):
         m_model = glm.mat4()
@@ -438,8 +441,54 @@ class BaseModelTexture:
         return m_model
 
     def update(self):
+        self.tint = self.transition_tint()
         self.write_per_frame_uniforms()
         self.write_per_object_uniforms()
+
+    def transition_tint(self):
+        if not hasattr(self.app, "season_controller"):
+            return self.base_tint
+        transition = self.app.season_controller.transition_snapshot()
+        if transition is None:
+            return self.base_tint
+
+        roles = (
+            ("ground_texture", "ground_color"),
+            ("road_texture", "road_color"),
+            ("garden_texture", "garden_lawn_color"),
+            ("yard_texture", "yard_color"),
+        )
+        for texture_key, color_key in roles:
+            if self.texture_name == transition["from"].get(texture_key):
+                target = transition["to"].get(color_key)
+                if target is not None:
+                    return _lerp_vec3(self.base_tint, glm.vec3(target), transition["eased"])
+        return self.base_tint
+
+    def transition_texture_blend(self):
+        if not hasattr(self.app, "season_controller"):
+            return self.texture, self.base_tint, 0.0
+        transition = self.app.season_controller.transition_snapshot()
+        if transition is None:
+            return self.texture, self.base_tint, 0.0
+
+        texture_roles = (
+            ("ground_texture", "ground_color"),
+            ("road_texture", "road_color"),
+            ("garden_texture", "garden_lawn_color"),
+            ("yard_texture", "yard_color"),
+        )
+        for texture_key, tint_key in texture_roles:
+            if self.texture_name != transition["from"].get(texture_key):
+                continue
+            next_texture_name = transition["to"].get(texture_key)
+            if not next_texture_name:
+                continue
+            next_texture = self.app.mesh.texture.get(next_texture_name)
+            next_tint = glm.vec3(transition["to"].get(tint_key, self.base_tint))
+            return next_texture, next_tint, transition["eased"]
+
+        return self.texture, self.base_tint, 0.0
 
     def write_per_frame_uniforms(self, force=False):
         if not _should_write_program_frame_uniforms(self.app, self.program, "texture", force):
@@ -457,11 +506,18 @@ class BaseModelTexture:
         _write_shadow_uniforms(self.program, self.app)
 
     def write_per_object_uniforms(self):
+        blend_texture, blend_tint, texture_blend = self.transition_texture_blend()
         self.texture.use(location=0)
+        blend_texture.use(location=2)
         self.program["m_model"].write(self.m_model)
         self.program["u_tint"].write(self.tint)
+        try:
+            self.program["u_blend_tint"].write(blend_tint)
+        except KeyError:
+            pass
         self.program["u_repeat"].write(self.repeat)
         self.program["u_alpha"].value = self.alpha
+        _set_uniform_value(self.program, "u_texture_blend", texture_blend)
 
     def render(self):
         self.update()
@@ -678,9 +734,8 @@ class SkyDome:
 
     def update(self):
         atmosphere = self.app.season_controller.atmosphere_state()
-        season = self.app.season_controller.current
-        effect = season.get("seasonal_effect", "spring")
-        effect_index = {"spring": 0.0, "summer": 1.0, "autumn": 2.0, "winter": 3.0}.get(effect, 0.0)
+        season = self.app.season_controller.get_blended_season()
+        effect_index = self.app.season_controller.season_effect_index()
         self.m_model = glm.translate(glm.mat4(), self.camera.position)
         self.m_model = glm.scale(self.m_model, glm.vec3(self.scale, self.scale, self.scale))
         self.program["m_view"].write(self.camera.m_view)
@@ -765,6 +820,84 @@ class TransitionCube(ColorCube):
         return self.start_pos.x * 0.37 + self.start_pos.z * 0.23 + self.progress_start * 5.0
 
 
+class TransitionDisc(SunDisc):
+    def __init__(
+        self,
+        app,
+        vao_name="sun_disc",
+        pos=(0, 0, 0),
+        end_pos=None,
+        rot=(90, 0, 0),
+        scale=(1, 1, 1),
+        end_scale=None,
+        color=(1.0, 1.0, 1.0),
+        end_color=None,
+        alpha_start=0.0,
+        alpha_peak=0.18,
+        alpha_end=0.0,
+        progress_start=0.0,
+        progress_peak=None,
+        progress_end=1.0,
+        pulse=0.0,
+        use_eased=True,
+    ):
+        self.start_pos = glm.vec3(pos)
+        self.end_pos = glm.vec3(end_pos if end_pos is not None else pos)
+        self.start_scale = glm.vec3(scale)
+        self.end_scale = glm.vec3(end_scale if end_scale is not None else scale)
+        self.start_color = glm.vec3(color)
+        self.end_color = glm.vec3(end_color if end_color is not None else color)
+        self.alpha_start = alpha_start
+        self.alpha_peak = alpha_peak
+        self.alpha_end = alpha_end
+        self.progress_start = progress_start
+        self.progress_peak = progress_peak if progress_peak is not None else (progress_start + progress_end) * 0.5
+        self.progress_end = progress_end
+        self.pulse = pulse
+        self.use_eased = use_eased
+        super().__init__(app, vao_name=vao_name, pos=pos, rot=rot, scale=scale, color=color, alpha=alpha_start)
+
+    def update(self):
+        transition = self.app.season_controller.transition_snapshot()
+        if transition is None:
+            progress = 1.0
+        else:
+            progress = transition["eased"] if self.use_eased else transition["progress"]
+
+        total = _transition_local_progress(
+            self.app,
+            self.progress_start,
+            self.progress_end,
+            self.use_eased,
+        )
+        if progress <= self.progress_peak:
+            alpha_t = _transition_local_progress(
+                self.app,
+                self.progress_start,
+                self.progress_peak,
+                self.use_eased,
+            )
+            self.alpha = self.alpha_start + (self.alpha_peak - self.alpha_start) * alpha_t
+        else:
+            alpha_t = _transition_local_progress(
+                self.app,
+                self.progress_peak,
+                self.progress_end,
+                self.use_eased,
+            )
+            self.alpha = self.alpha_peak + (self.alpha_end - self.alpha_peak) * alpha_t
+
+        pulse = 1.0
+        if self.pulse:
+            pulse += math.sin(self.app.time * math.tau * 1.2 + self.start_pos.x * 0.2 + self.start_pos.z * 0.3) * self.pulse
+
+        self.pos = _lerp_vec3(self.start_pos, self.end_pos, total)
+        self.scale = _lerp_vec3(self.start_scale, self.end_scale, total) * pulse
+        self.color = _lerp_vec3(self.start_color, self.end_color, total)
+        self.m_model = self.get_model_matrix()
+        super().update()
+
+
 class RainDrop(ColorCube):
     def __init__(
         self,
@@ -824,7 +957,7 @@ class DriftParticle(ColorCube):
         super().__init__(app, vao_name, pos, rot, scale, color)
 
     def update(self):
-        speed_boost = self.app.season_controller.current.get("particle_speed_boost", 1.0)
+        speed_boost = self.app.season_controller.get_blended_season().get("particle_speed_boost", 1.0)
         progress = (self.app.time * self.speed * speed_boost + self.phase) % 1.0
         wave = math.sin((progress + self.phase) * math.tau)
         cross = math.cos((progress * 1.7 + self.phase) * math.tau)
@@ -864,7 +997,7 @@ class WindStreak(ColorCube):
         super().__init__(app, vao_name, pos, rot, scale, color)
 
     def update(self):
-        boost = self.app.season_controller.current.get("wind_motion_boost", 1.0)
+        boost = self.app.season_controller.get_blended_season().get("wind_motion_boost", 1.0)
         progress = (self.app.time * self.speed * boost + self.phase) % 1.0
         wave = math.sin((progress + self.phase) * math.tau)
         self.pos = glm.vec3(
@@ -968,9 +1101,8 @@ class WaterSurface(BaseModelColor):
 
     def update(self):
         super().update()
-        season = self.app.season_controller.current
-        effect = season.get("seasonal_effect", "spring")
-        effect_index = {"spring": 0.0, "summer": 1.0, "autumn": 2.0, "winter": 3.0}.get(effect, 0.0)
+        season = self.app.season_controller.get_blended_season()
+        effect_index = self.app.season_controller.season_effect_index()
         self.program["u_time"].value = self.app.time
         self.program["u_water_mode"].value = effect_index
         self.program["u_wave_strength"].value = season.get("water_wave_strength", 1.0)
@@ -989,7 +1121,34 @@ class IceSurface(BaseModelColor):
         scale=(1, 1, 1),
         color=(0.70, 0.88, 0.96),
     ):
+        self.base_pos = glm.vec3(pos)
+        self.base_scale = glm.vec3(scale)
+        self.base_color = glm.vec3(color)
         super().__init__(app, vao_name, pos, rot, scale, color)
+
+    def melt_progress(self):
+        transition = self.app.season_controller.transition_snapshot()
+        if transition is None or transition["pair"] != "winter->spring":
+            return 0.0
+        return transition.get("melt_intensity", transition["eased"])
+
+    def update(self):
+        melt = self.melt_progress()
+        cool_water = glm.vec3(0.42, 0.70, 0.82)
+        self.pos = glm.vec3(
+            self.base_pos.x,
+            self.base_pos.y - 0.018 * melt,
+            self.base_pos.z,
+        )
+        self.scale = glm.vec3(
+            self.base_scale.x * (1.0 - 0.18 * melt),
+            self.base_scale.y,
+            self.base_scale.z * (1.0 - 0.18 * melt),
+        )
+        self.color = _lerp_vec3(self.base_color, cool_water, min(1.0, melt * 1.15))
+        self.m_model = self.get_model_matrix()
+        super().update()
+        _set_uniform_value(self.program, "u_melt", melt)
 
 
 class IslandMound(BaseModelColor):
@@ -1054,7 +1213,30 @@ class FloatingPetals(BaseModelColor):
         scale=(1, 1, 1),
         color=(1.00, 0.62, 0.82),
     ):
+        self.base_scale = glm.vec3(scale)
+        self.base_color = glm.vec3(color)
         super().__init__(app, vao_name, pos, rot, scale, color)
+
+    def visibility(self):
+        transition = self.app.season_controller.transition_snapshot()
+        if transition is None:
+            return 1.0
+
+        pair = transition["pair"]
+        if pair == "spring->summer":
+            return transition.get("petal_fade", 1.0)
+        if pair == "autumn->winter":
+            return 1.0 - transition.get("snow_intensity", transition["eased"])
+        if pair == "winter->spring":
+            return transition.get("petal_intensity", transition["eased"])
+        return 1.0
+
+    def update(self):
+        visibility = max(0.015, self.visibility())
+        self.scale = self.base_scale * visibility
+        self.color = self.base_color
+        self.m_model = self.get_model_matrix()
+        super().update()
 
 
 class FujiPeak(BaseModelColor):

@@ -8,7 +8,7 @@ from .paths import SHADER_DIR
 
 
 class HUD:
-    def __init__(self, app, size=(490, 236), margin=14):
+    def __init__(self, app, size=(520, 260), margin=14):
         self.app = app
         self.ctx = app.ctx
         self.size = size
@@ -121,6 +121,7 @@ class HUD:
         day_state = season_controller.day_state()
         hour = int((season_controller.day_time * 24.0) % 24.0)
         minute = int(((season_controller.day_time * 24.0) % 1.0) * 60.0)
+        season = season_controller.get_blended_season()
         period = (
             "Malam"
             if day_state["night"] > 0.55
@@ -128,13 +129,22 @@ class HUD:
             if day_state["dusk"] > 0.45
             else "Siang"
         )
-        weather = season_controller.current.get(
+        weather = season.get(
             "weather_label",
-            "Hujan" if season_controller.current.get("rain_enabled", False) else "Cerah",
+            "Hujan" if season.get("rain_enabled", False) else "Cerah",
         )
-        special_effect = season_controller.current.get("special_effect_label", "Season scene")
+        special_effect = season.get("special_effect_label", "Season scene")
         if season_controller.is_transitioning:
+            transition = season_controller.transition_snapshot()
             season_progress = f"Transisi {season_controller.transition_progress * 100:0.0f}%"
+            if transition["pair"] == "winter->spring":
+                special_effect = (
+                    f"Cair {transition['melt_intensity'] * 100:0.0f}% | "
+                    f"Tunas {transition['sprout_intensity'] * 100:0.0f}% | "
+                    f"Mekar {transition['bloom_intensity'] * 100:0.0f}%"
+                )
+            else:
+                special_effect = transition["story"]
         elif season_controller.time_lapse_enabled:
             season_progress = f"Progress {season_controller.elapsed / season_controller.season_duration * 100:0.0f}%"
         else:
@@ -153,6 +163,14 @@ class HUD:
             f"Camera {camera_mode} | Quality {quality} | {season_mode}",
             f"{screenshot} | {self.app.audio.status}",
         ]
+        if season_controller.is_transitioning:
+            timeline = season_controller.transition_snapshot().get("timeline", [])
+            if timeline:
+                stages = []
+                for item in timeline[:5]:
+                    mark = ">" if item["active"] else "*" if item["done"] else "-"
+                    stages.append(f"{mark}{item['label']} {item['progress'] * 100:0.0f}%")
+                lines.insert(3, "Timeline " + " | ".join(stages))
         if self.app.profile_visible:
             stats = self.app.render_stats
             lines.extend(

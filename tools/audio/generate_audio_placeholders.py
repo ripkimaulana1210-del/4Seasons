@@ -8,7 +8,7 @@ from dataclasses import dataclass, asdict
 from pathlib import Path
 
 
-ROOT_DIR = Path(__file__).resolve().parents[1]
+ROOT_DIR = Path(__file__).resolve().parents[2]
 AUDIO_DIR = ROOT_DIR / "assets" / "audio"
 SEASONS_DIR = ROOT_DIR / "engine" / "seasons"
 

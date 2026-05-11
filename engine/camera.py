@@ -3,7 +3,7 @@ import math
 from pyglm import glm
 import pygame as pg
 
-from .data.scene_config import CAMERA_PRESETS
+from .data.scene_config import CAMERA_PRESETS, TRANSITION_PRESETS
 
 FOV = 62
 NEAR = 0.1
@@ -30,6 +30,8 @@ class Camera:
         self.orbit_radius = 10.0
         self.cinematic_enabled = False
         self.cinematic_duration = 22.0
+        self.transition_cinematic_route = None
+        self.transition_cinematic_pair = ""
         self.preset_name = "free"
 
         self.m_proj = self.get_projection_matrix()
@@ -131,6 +133,8 @@ class Camera:
 
     def set_default(self):
         self.cinematic_enabled = False
+        self.transition_cinematic_route = None
+        self.transition_cinematic_pair = ""
         self.preset_name = "orbit" if self.use_orbit else "free"
         self.position = glm.vec3(0.0, 2.35, 15.6)
         self.orbit_target = glm.vec3(0, 2.7, 0)
@@ -150,6 +154,8 @@ class Camera:
             return
 
         self.cinematic_enabled = False
+        self.transition_cinematic_route = None
+        self.transition_cinematic_pair = ""
         self.use_orbit = False
         self.preset_name = name
         self.position = glm.vec3(preset["position"])
@@ -158,8 +164,24 @@ class Camera:
 
     def toggle_cinematic(self):
         self.cinematic_enabled = not self.cinematic_enabled
+        self.transition_cinematic_route = None
+        self.transition_cinematic_pair = ""
         self.use_orbit = False
         self.preset_name = "cinematic" if self.cinematic_enabled else "free"
+        pg.mouse.get_rel()
+
+    def start_transition_cinematic(self, pair, route=None, duration=8.0):
+        route = route or TRANSITION_PRESETS.get(pair, {}).get("camera_route")
+        if not route:
+            return
+        if any(name not in CAMERA_PRESETS for name in route):
+            return
+        self.transition_cinematic_pair = pair
+        self.transition_cinematic_route = tuple(route)
+        self.cinematic_duration = max(0.25, float(duration))
+        self.cinematic_enabled = True
+        self.use_orbit = False
+        self.preset_name = "transition"
         pg.mouse.get_rel()
 
     def set_season_preset(self):
@@ -168,6 +190,8 @@ class Camera:
             self.set_preset(name)
 
     def cinematic_route(self):
+        if self.preset_name == "transition" and self.transition_cinematic_route:
+            return self.transition_cinematic_route
         return self.app.season_controller.current.get(
             "cinematic_route",
             ("sakura", "bridge", "village", "fuji"),
@@ -180,7 +204,18 @@ class Camera:
 
     def update_cinematic(self):
         segment_count = len(self.cinematic_route())
-        progress = (self.app.time / self.cinematic_duration) % 1.0
+        transition = self.app.season_controller.transition_snapshot()
+        if self.preset_name == "transition" and transition is not None:
+            progress = min(0.999, transition["progress"])
+        elif self.preset_name == "transition":
+            self.cinematic_enabled = False
+            self.transition_cinematic_route = None
+            self.transition_cinematic_pair = ""
+            self.preset_name = "free"
+            self.m_view = self.get_view_matrix()
+            return
+        else:
+            progress = (self.app.time / self.cinematic_duration) % 1.0
         segment = min(segment_count - 1, int(progress * segment_count))
         local_t = progress * segment_count - segment
         eased = local_t * local_t * (3.0 - 2.0 * local_t)

@@ -9,6 +9,7 @@ uniform mat4 m_view;
 uniform mat4 m_model;
 uniform mat4 m_light_space;
 uniform float u_time;
+uniform float u_melt;
 
 out vec3 v_world_pos;
 out vec3 v_normal;
@@ -19,7 +20,10 @@ out vec4 v_shadow_pos;
 void main() {
     vec3 pos = in_position;
     float crystal = sin(pos.x * 8.0 + pos.z * 5.0) * cos(pos.z * 7.0 - pos.x * 3.0);
-    pos.y += crystal * 0.006;
+    float radial = length(in_uv - vec2(0.5)) * 2.0;
+    float edge_thaw = smoothstep(0.42, 0.98, radial) * u_melt;
+    pos.y += crystal * 0.006 * (1.0 - u_melt * 0.35);
+    pos.y -= edge_thaw * 0.020 + u_melt * 0.006;
 
     vec4 world_pos = m_model * vec4(pos, 1.0);
     v_world_pos = world_pos.xyz;

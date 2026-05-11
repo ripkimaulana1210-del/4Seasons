@@ -29,6 +29,7 @@ from ..model import (
     TexturedGableRoof,
     TexturedPlane,
     TransitionCube,
+    TransitionDisc,
     WaterReflection,
     WaterSurface,
     WindStreak,
@@ -232,7 +233,14 @@ class SceneEnvironmentMixin:
         add(SkyDome(app))
         add(MoonDisc(app))
 
-        if self.season_value("aurora_intensity", 0.0) > 0.0:
+        transition = app.season_controller.transition_snapshot()
+        transition_aurora = 0.0
+        if transition is not None:
+            transition_aurora = max(
+                transition["from"].get("aurora_intensity", 0.0),
+                transition["to"].get("aurora_intensity", 0.0),
+            )
+        if max(self.season_value("aurora_intensity", 0.0), transition_aurora) > 0.0:
             add(AuroraBand(app))
 
         cloud_specs = [
@@ -329,7 +337,92 @@ class SceneEnvironmentMixin:
                 )
             )
 
+        self.add_transition_ground_blend(app, transition)
         self.add_story_transition(app, transition)
+
+    def add_transition_ground_blend(self, app, transition):
+        add = self.add_object
+        pair = transition["pair"]
+        from_ground = transition["from"].get("ground_color", (0.46, 0.54, 0.42))
+        to_ground = transition["to"].get("ground_color", (0.46, 0.54, 0.42))
+        target_alpha = {
+            "winter->spring": 0.22,
+            "spring->summer": 0.14,
+            "summer->autumn": 0.18,
+            "autumn->winter": 0.24,
+        }.get(pair, 0.14)
+
+        # Color overlay fallback when real texture cross-fade is not available.
+        for i, (x, z, scale_x, scale_z) in enumerate(
+            (
+                (0.0, 0.0, 12.8, 12.8),
+                (-8.2, 3.6, 5.6, 4.2),
+                (7.6, -4.0, 5.4, 4.4),
+                (2.2, 8.4, 4.6, 3.8),
+            )
+        ):
+            add(
+                TransitionDisc(
+                    app,
+                    pos=(x, 0.024 + i * 0.001, z),
+                    rot=(90, i * 23.0, 0),
+                    scale=(scale_x, scale_z, 1.0),
+                    color=from_ground,
+                    end_color=to_ground,
+                    alpha_start=0.02,
+                    alpha_peak=target_alpha,
+                    alpha_end=target_alpha * 0.65,
+                    progress_start=0.05,
+                    progress_peak=0.64,
+                    progress_end=1.0,
+                )
+            )
+
+        if pair == "winter->spring":
+            snow = transition["from"].get("winter_snow_color", (0.94, 0.97, 1.0))
+            for i in range(18):
+                angle = math.radians(i * 360.0 / 18.0 + 9.0)
+                radius = 3.4 + (i % 6) * 1.25
+                add(
+                    TransitionDisc(
+                        app,
+                        pos=(math.cos(angle) * radius, 0.035 + (i % 3) * 0.002, math.sin(angle) * radius),
+                        rot=(90, i * 31.0, 0),
+                        scale=(0.78 + 0.18 * (i % 3), 0.42 + 0.10 * (i % 2), 1.0),
+                        end_scale=(0.16 + 0.04 * (i % 2), 0.08 + 0.03 * (i % 3), 1.0),
+                        color=snow,
+                        end_color=(0.62, 0.82, 0.88),
+                        alpha_start=0.28,
+                        alpha_peak=0.20,
+                        alpha_end=0.0,
+                        progress_start=0.00,
+                        progress_peak=0.24 + (i % 4) * 0.035,
+                        progress_end=0.58 + (i % 5) * 0.045,
+                    )
+                )
+
+        elif pair == "autumn->winter":
+            frost = transition["to"].get("winter_snow_color", (0.94, 0.97, 1.0))
+            for i in range(22):
+                angle = math.radians(i * 360.0 / 22.0)
+                radius = 6.2 + (i % 5) * 0.82
+                add(
+                    TransitionDisc(
+                        app,
+                        pos=(math.cos(angle) * radius, 0.040 + (i % 4) * 0.002, math.sin(angle) * radius),
+                        rot=(90, i * 27.0, 0),
+                        scale=(0.10, 0.05, 1.0),
+                        end_scale=(0.64 + 0.12 * (i % 3), 0.30 + 0.08 * (i % 2), 1.0),
+                        color=(0.76, 0.52, 0.20),
+                        end_color=frost,
+                        alpha_start=0.0,
+                        alpha_peak=0.18,
+                        alpha_end=0.26,
+                        progress_start=0.30 + (i % 4) * 0.035,
+                        progress_peak=0.70,
+                        progress_end=1.0,
+                    )
+                )
 
     def add_story_transition(self, app, transition):
         pair = transition["pair"]
@@ -399,6 +492,49 @@ class SceneEnvironmentMixin:
                     end_color=dry_grass,
                     progress_start=0.24 + (i % 4) * 0.035,
                     progress_end=0.96,
+                )
+            )
+
+        # Spring petals give way to summer sparkle and dusk fireflies.
+        for i in range(26):
+            angle = math.radians(i * 137.5)
+            radius = 0.72 + (i % 8) * 0.38
+            add(
+                TransitionDisc(
+                    app,
+                    pos=(math.cos(angle) * radius, 0.104 + (i % 3) * 0.002, math.sin(angle) * radius),
+                    rot=(90, i * 17.0, 0),
+                    scale=(0.045, 0.020, 1.0),
+                    end_scale=(0.16 + 0.03 * (i % 3), 0.055, 1.0),
+                    color=(1.00, 0.72, 0.90),
+                    end_color=(1.00, 0.90, 0.32),
+                    alpha_start=0.0,
+                    alpha_peak=0.20,
+                    alpha_end=0.12,
+                    progress_start=0.36 + (i % 5) * 0.035,
+                    progress_peak=0.72,
+                    progress_end=1.0,
+                    pulse=0.10,
+                )
+            )
+
+        for i in range(24):
+            angle = math.radians(i * 41.0)
+            center = (
+                math.cos(angle) * (2.8 + (i % 5) * 0.35),
+                0.55 + (i % 6) * 0.16,
+                math.sin(angle) * (2.6 + (i % 4) * 0.38),
+            )
+            add(
+                FireflyGlow(
+                    app,
+                    center=center,
+                    orbit=(0.24 + (i % 4) * 0.035, 0.12, 0.24 + (i % 3) * 0.040),
+                    scale=(0.022, 0.022, 1.0),
+                    color=(1.00, 0.96, 0.42),
+                    alpha=0.50,
+                    speed=0.11 + (i % 6) * 0.014,
+                    phase=(i * 0.071) % 1.0,
                 )
             )
 
@@ -475,6 +611,46 @@ class SceneEnvironmentMixin:
                 )
             )
 
+        # Leaf piles gather along the path while a late cold rain starts.
+        for i in range(30):
+            angle = math.radians(190 + i * 6.4)
+            radius = 6.10 + 0.90 * math.sin(i * 0.51) ** 2
+            add(
+                TransitionCube(
+                    app,
+                    pos=(math.cos(angle) * radius, 0.036, math.sin(angle) * radius),
+                    rot=(0, i * 21.0, 0),
+                    scale=(0.030, 0.004, 0.018),
+                    end_scale=(0.24 + 0.05 * (i % 3), 0.026 + 0.008 * (i % 2), 0.14 + 0.03 * (i % 4)),
+                    color=(0.40, 0.58, 0.20),
+                    end_color=leaf_colors[(i + 2) % len(leaf_colors)],
+                    progress_start=0.44 + (i % 5) * 0.035,
+                    progress_end=1.0,
+                )
+            )
+
+        for i in range(34):
+            col = i % 9
+            row = i // 9
+            x = -7.8 + col * 1.9 + 0.18 * math.sin(i)
+            z = -5.8 + row * 2.0 + 0.22 * math.cos(i)
+            start = 0.60 + (i % 6) * 0.035
+            add(
+                TransitionCube(
+                    app,
+                    pos=(x, 4.8 + (i % 4) * 0.30, z),
+                    end_pos=(x + 0.22, 0.36, z - 0.18),
+                    rot=(18, 24, -12),
+                    scale=(0.004, 0.010, 0.004),
+                    end_scale=(0.008, 0.28 + 0.04 * (i % 3), 0.008),
+                    color=(0.54, 0.70, 0.82),
+                    end_color=(0.46, 0.60, 0.70),
+                    progress_start=start,
+                    progress_end=min(1.0, start + 0.30),
+                    pulse=0.08,
+                )
+            )
+
     def add_autumn_to_winter_snow(self, app, transition):
         add = self.add_object
         snow = (0.94, 0.97, 1.00)
@@ -547,6 +723,32 @@ class SceneEnvironmentMixin:
         puddle = (0.30, 0.58, 0.66)
         sprout = (0.38, 0.74, 0.28)
 
+        # Ice crack then melt: bright cracks flash across pond and icy road, then fade.
+        for i in range(24):
+            angle = math.radians(i * 37.0 + 8.0 * math.sin(i))
+            radius = 0.85 + (i % 7) * 0.54
+            x = math.cos(angle) * radius
+            z = math.sin(angle) * radius
+            add(
+                TransitionDisc(
+                    app,
+                    pos=(x, 0.112 + (i % 3) * 0.001, z),
+                    rot=(90, math.degrees(angle) + i * 11.0, 0),
+                    scale=(0.020, 0.18 + 0.035 * (i % 4), 1.0),
+                    end_scale=(0.012, 0.07 + 0.020 * (i % 3), 1.0),
+                    color=(0.86, 0.98, 1.00),
+                    end_color=(0.36, 0.66, 0.76),
+                    alpha_start=0.0,
+                    alpha_peak=0.58,
+                    alpha_end=0.0,
+                    progress_start=0.12 + (i % 5) * 0.012,
+                    progress_peak=0.28 + (i % 4) * 0.018,
+                    progress_end=0.52 + (i % 3) * 0.035,
+                    pulse=0.06,
+                    use_eased=False,
+                )
+            )
+
         # Snow caps collapse into small blue puddles before the spring scene takes over.
         for i in range(44):
             angle = math.radians(i * 360.0 / 44.0 + 12.0)
@@ -581,6 +783,87 @@ class SceneEnvironmentMixin:
                 )
             )
 
+        # Thin thaw streams spread from the frozen pond edge as the ice gives way.
+        for i in range(34):
+            angle = math.radians(i * 360.0 / 34.0 + 6.0 * math.sin(i))
+            radius = 4.50 + 0.28 * math.sin(i * 1.3)
+            end_radius = radius + 0.70 + 0.20 * math.cos(i * 0.8)
+            x = math.cos(angle) * radius
+            z = math.sin(angle) * radius
+            end_x = math.cos(angle + 0.05 * math.sin(i)) * end_radius
+            end_z = math.sin(angle - 0.04 * math.cos(i)) * end_radius
+            start = 0.08 + (i % 8) * 0.028
+            add(
+                TransitionCube(
+                    app,
+                    pos=(x, 0.070, z),
+                    end_pos=(end_x, 0.038, end_z),
+                    rot=(0, math.degrees(angle), 0),
+                    scale=(0.010, 0.003, 0.026),
+                    end_scale=(0.030 + 0.006 * (i % 3), 0.004, 0.32 + 0.05 * (i % 4)),
+                    color=(0.86, 0.95, 1.00),
+                    end_color=(0.18, 0.46, 0.56),
+                    progress_start=start,
+                    progress_end=min(0.74, start + 0.44),
+                    pulse=0.04,
+                )
+            )
+
+        # Snow caught in the sakura canopy loosens and drops before the buds open.
+        for i in range(28):
+            angle = math.radians(i * 137.5)
+            radius = 0.48 + (i % 7) * 0.19
+            start_x = math.cos(angle) * radius
+            start_z = math.sin(angle) * radius
+            end_x = start_x + 0.26 * math.cos(angle + 0.8)
+            end_z = start_z + 0.20 * math.sin(angle - 0.5)
+            start = 0.04 + (i % 7) * 0.040
+            add(
+                TransitionCube(
+                    app,
+                    pos=(start_x, 1.72 + (i % 6) * 0.16, start_z),
+                    end_pos=(end_x, 0.075 + (i % 3) * 0.004, end_z),
+                    rot=(0, i * 29.0, 12),
+                    scale=(0.040, 0.018, 0.030),
+                    end_scale=(0.070 + 0.015 * (i % 2), 0.004, 0.050),
+                    color=snow,
+                    end_color=puddle,
+                    progress_start=start,
+                    progress_end=min(0.66, start + 0.36),
+                    pulse=0.04,
+                )
+            )
+
+        drip_sites = [
+            (-6.6, 1.05, 8.4),
+            (-4.7, 0.92, 7.8),
+            (5.7, 1.00, -7.8),
+            (7.8, 0.82, -5.9),
+            (-2.2, 0.64, -4.8),
+            (3.1, 0.58, 4.9),
+        ]
+        for i in range(48):
+            site = drip_sites[i % len(drip_sites)]
+            x = site[0] + 0.18 * math.sin(i * 1.7)
+            y = site[1] + 0.08 * (i % 3)
+            z = site[2] + 0.16 * math.cos(i * 1.1)
+            start = 0.16 + (i % 9) * 0.030
+            add(
+                TransitionCube(
+                    app,
+                    pos=(x, y, z),
+                    end_pos=(x + 0.04 * math.sin(i), 0.070, z + 0.04 * math.cos(i)),
+                    rot=(0, i * 11.0, 0),
+                    scale=(0.010, 0.028, 0.010),
+                    end_scale=(0.035, 0.004, 0.030),
+                    color=(0.78, 0.94, 1.00),
+                    end_color=puddle,
+                    progress_start=start,
+                    progress_end=min(0.78, start + 0.34),
+                    pulse=0.08,
+                )
+            )
+
         # New sprouts and blossoms rise after the melt.
         bloom_colors = [
             ((1.00, 0.62, 0.84), (1.00, 0.82, 0.94), (0.96, 0.78, 0.24)),
@@ -605,6 +888,97 @@ class SceneEnvironmentMixin:
                 center,
                 sprout,
                 angle + i * 0.17,
+            )
+
+        self.add_tree_reawakening(app)
+
+        # Petals begin only after the thaw is well underway.
+        for i in range(54):
+            angle = math.radians(i * 137.5 + 12.0)
+            radius = 0.9 + (i % 9) * 0.46
+            start = 0.55 + (i % 8) * 0.030
+            start_x = math.cos(angle) * radius
+            start_z = math.sin(angle) * radius
+            end_x = start_x + 0.80 * math.cos(angle + 1.1)
+            end_z = start_z - 0.48 * math.sin(angle * 0.7)
+            add(
+                TransitionCube(
+                    app,
+                    pos=(start_x, 2.25 + (i % 7) * 0.18, start_z),
+                    end_pos=(end_x, 0.28 + (i % 4) * 0.035, end_z),
+                    rot=(12, i * 29.0, 24),
+                    scale=(0.008, 0.004, 0.006),
+                    end_scale=(0.046, 0.005, 0.024),
+                    color=(1.00, 0.82, 0.94),
+                    end_color=(1.00, 0.62, 0.84),
+                    progress_start=start,
+                    progress_end=min(1.0, start + 0.38),
+                    pulse=0.06,
+                )
+            )
+
+    def add_tree_reawakening(self, app):
+        add = self.add_object
+        bud_green = (0.40, 0.74, 0.30)
+        young_leaf = (0.56, 0.86, 0.36)
+        pale_leaf = (0.70, 0.90, 0.42)
+        blossom_deep = (1.00, 0.58, 0.82)
+        blossom_light = (1.00, 0.78, 0.92)
+        frost_bud = (0.84, 0.92, 0.98)
+
+        for i in range(64):
+            angle = math.radians(i * 137.5 + 18.0 * math.sin(i))
+            ring = i % 8
+            radius = 0.55 + ring * 0.115 + 0.08 * math.sin(i * 0.7)
+            y = 1.34 + (i % 7) * 0.145 + 0.10 * math.sin(i * 1.1)
+            x = math.cos(angle) * radius
+            z = math.sin(angle) * radius
+            outward = 1.06 + 0.06 * math.sin(i)
+            is_blossom = i % 3 == 0
+            end_color = blossom_deep if i % 2 == 0 else blossom_light
+            if not is_blossom:
+                end_color = young_leaf if i % 4 else pale_leaf
+
+            start = 0.38 + (i % 10) * 0.026
+            add(
+                TransitionCube(
+                    app,
+                    pos=(x * 0.92, y - 0.030, z * 0.92),
+                    end_pos=(x * outward, y + 0.025, z * outward),
+                    rot=(12, math.degrees(angle), 22 if is_blossom else 10),
+                    scale=(0.006, 0.004, 0.006),
+                    end_scale=(
+                        0.040 if is_blossom else 0.055,
+                        0.010 if is_blossom else 0.008,
+                        0.020 if is_blossom else 0.026,
+                    ),
+                    color=frost_bud,
+                    end_color=end_color,
+                    progress_start=start,
+                    progress_end=min(1.0, start + (0.40 if is_blossom else 0.32)),
+                    pulse=0.05 if is_blossom else 0.03,
+                )
+            )
+
+        for i in range(18):
+            angle = math.radians(20 + i * 19.0)
+            radius = 0.72 + 0.22 * math.sin(i * 0.9) ** 2
+            x = math.cos(angle) * radius
+            z = math.sin(angle) * radius
+            add(
+                TransitionCube(
+                    app,
+                    pos=(x, 1.18 + (i % 4) * 0.16, z),
+                    end_pos=(x * 1.10, 1.26 + (i % 4) * 0.16, z * 1.10),
+                    rot=(8, math.degrees(angle), -18),
+                    scale=(0.010, 0.006, 0.010),
+                    end_scale=(0.070, 0.008, 0.024),
+                    color=frost_bud,
+                    end_color=bud_green,
+                    progress_start=0.28 + (i % 6) * 0.035,
+                    progress_end=0.72,
+                    pulse=0.03,
+                )
             )
 
     def add_transition_bloom(

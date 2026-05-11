@@ -33,6 +33,54 @@ CAMERA_PRESETS = {
     },
 }
 
+TRANSITION_PRESETS = {
+    "winter->spring": {
+        "duration": 8.0,
+        "camera_route": ("season_winter", "bridge", "sakura", "season_spring"),
+        "timeline": (
+            ("Crack", 0.12, 0.52),
+            ("Melt", 0.02, 0.64),
+            ("Sprout", 0.30, 0.80),
+            ("Bloom", 0.46, 0.94),
+            ("Petals", 0.55, 1.00),
+        ),
+        "audio_cue": "thaw",
+    },
+    "spring->summer": {
+        "duration": 7.0,
+        "camera_route": ("season_spring", "bridge", "season_summer"),
+        "timeline": (
+            ("Petals fade", 0.10, 0.70),
+            ("Heat", 0.16, 0.86),
+            ("Sparkle", 0.36, 0.95),
+            ("Fireflies", 0.55, 1.00),
+        ),
+        "audio_cue": "heat",
+    },
+    "summer->autumn": {
+        "duration": 7.5,
+        "camera_route": ("season_summer", "sakura", "season_autumn"),
+        "timeline": (
+            ("Gold leaves", 0.16, 0.72),
+            ("Leaf fall", 0.22, 0.92),
+            ("Wind", 0.20, 0.88),
+            ("Cold rain", 0.60, 1.00),
+        ),
+        "audio_cue": "leaves",
+    },
+    "autumn->winter": {
+        "duration": 8.0,
+        "camera_route": ("season_autumn", "bridge", "season_winter"),
+        "timeline": (
+            ("Frost", 0.24, 0.88),
+            ("Freeze", 0.38, 0.96),
+            ("First snow", 0.42, 1.00),
+            ("Aurora", 0.62, 1.00),
+        ),
+        "audio_cue": "snow",
+    },
+}
+
 QUALITY_PROFILES = [
     {
         "id": "low",

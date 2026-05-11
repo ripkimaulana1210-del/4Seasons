@@ -12,6 +12,7 @@ uniform vec3 cam_pos;
 uniform vec3 u_color;
 uniform float u_time;
 uniform float u_night_factor;
+uniform float u_melt;
 uniform vec3 u_fog_color;
 uniform float u_fog_density;
 uniform float u_fog_start;
@@ -51,6 +52,12 @@ float crack_line(float value, float width) {
     return 1.0 - smoothstep(0.0, width, abs(fract(value) - 0.5));
 }
 
+float hash(vec2 p) {
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
 void main() {
     vec3 N = normalize(v_normal);
     vec3 L = normalize(light.position - v_world_pos);
@@ -65,15 +72,24 @@ void main() {
     float crack_b = crack_line(v_uv.y * 11.0 - v_uv.x * 1.5, 0.030);
     float cracks = max(crack_a * 0.55, crack_b * 0.40);
     float shimmer = 0.5 + 0.5 * sin(u_time * 1.4 + v_world_pos.x * 1.7 + v_world_pos.z * 1.2);
+    float radial = length(v_uv - vec2(0.5)) * 2.0;
+    float cell_noise = hash(floor((v_uv + vec2(u_time * 0.010, -u_time * 0.006)) * 18.0));
+    float edge_melt = smoothstep(0.44, 1.05, radial + u_melt * 0.58 + cell_noise * 0.16);
+    float thaw_pools = smoothstep(0.52, 0.94, u_melt + cell_noise * 0.34 - radial * 0.12);
 
     vec3 deep = mix(vec3(0.36, 0.62, 0.74), vec3(0.12, 0.22, 0.36), u_night_factor);
     vec3 pale = mix(u_color, vec3(0.56, 0.72, 1.0), u_night_factor * 0.45);
     vec3 base = mix(deep, pale, 0.58 + v_crystal * 0.12);
-    base += cracks * vec3(0.34, 0.52, 0.62);
-    base += fresnel * vec3(0.46, 0.72, 1.0) * (0.32 + u_night_factor * 0.28);
-    base += spec * vec3(1.0) * (0.35 + shimmer * 0.25);
+    base = mix(base, vec3(0.30, 0.62, 0.76), u_melt * 0.42 + thaw_pools * 0.18);
+    base += cracks * vec3(0.34, 0.52, 0.62) * (1.0 + u_melt * 0.65);
+    base += fresnel * vec3(0.46, 0.72, 1.0) * (0.32 + u_night_factor * 0.28) * (1.0 - u_melt * 0.25);
+    base += spec * vec3(1.0) * (0.35 + shimmer * 0.25) * (1.0 - u_melt * 0.30);
+    base += thaw_pools * vec3(0.08, 0.22, 0.28) * 0.25;
 
     float shadow = shadow_factor(N, L);
     vec3 lit = light.Ia * base * 1.20 + (light.Id * diff * base * 0.82 + light.Is * spec * 0.25) * shadow;
-    fragColor = vec4(apply_fog(lit, v_world_pos), 0.82);
+    float alpha = mix(0.82, 0.03, u_melt);
+    alpha *= 1.0 - edge_melt * 0.66;
+    alpha *= 1.0 - thaw_pools * 0.44;
+    fragColor = vec4(apply_fog(lit, v_world_pos), clamp(alpha, 0.0, 0.82));
 }

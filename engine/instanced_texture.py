@@ -27,6 +27,8 @@ class InstancedTextureRenderer:
         return self.ctx.program(vertex_shader=vertex_shader, fragment_shader=fragment_shader)
 
     def is_eligible(self, obj):
+        if self.app.season_controller.is_transitioning:
+            return False
         if not isinstance(obj, BaseModelTexture):
             return False
         if getattr(obj, "is_background", False):
