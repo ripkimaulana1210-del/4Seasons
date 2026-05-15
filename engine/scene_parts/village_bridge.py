@@ -1,6 +1,6 @@
 import math
 
-from ..data.scene_config import HOUSE_SPECS
+from ..data.scene_config import HOUSE_SPECS, SCENE_LAYOUT
 from ..models import (
     AtmosphereSunDisc,
     AuroraBand,
@@ -47,8 +47,8 @@ class SceneVillageBridgeMixin:
         footing_color = (0.44, 0.41, 0.38)
         post_cap_color = (0.90, 0.70, 0.38)
 
-        pond_radius_scale = 5.55 / 4.80
-        island_radius_scale = 2.35 / 1.95
+        pond_radius_scale = SCENE_LAYOUT["pond"]["radius_scale"]
+        island_radius_scale = SCENE_LAYOUT["island"]["radius_scale"]
 
         start = (2.45 * pond_radius_scale, 4.38 * pond_radius_scale)
         control = (2.02 * pond_radius_scale, 3.56 * pond_radius_scale)

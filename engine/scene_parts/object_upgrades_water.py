@@ -1,6 +1,6 @@
 import math
 
-from ..data.scene_config import HOUSE_SPECS
+from ..data.scene_config import HOUSE_SPECS, SCENE_LAYOUT
 from ..models import ColorCube, ColorPlane, FireflyGlow, NightGlow, PondRock, SunDisc, WindStreak
 
 
@@ -228,7 +228,7 @@ class SceneWaterUpgradeMixin:
 
     def add_bridge_detail_props(self, app, pond_radius_scale):
         add = self.add_object
-        island_radius_scale = 2.35 / 1.95
+        island_radius_scale = SCENE_LAYOUT["island"]["radius_scale"]
         bridge_width = 1.30
         y_base = 0.16
         arch_height = 0.88

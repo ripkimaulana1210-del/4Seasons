@@ -1,6 +1,6 @@
 import math
 
-from ..data.scene_config import HOUSE_SPECS
+from ..data.scene_config import HOUSE_SPECS, SCENE_LAYOUT
 from ..models import ColorCube, ColorPlane, FireflyGlow, NightGlow, PondRock, SunDisc, WindStreak
 
 
@@ -26,8 +26,8 @@ class SceneWinterObjectUpgradeMixin:
         for i, local_x in enumerate((-0.52, -0.30, -0.08, 0.14, 0.38, 0.58)):
             self.add_local_cube(app, torii_x, torii_z, torii_yaw, local_x, 1.38 - 0.02 * (i % 3), 0.055, (0.016, 0.10 + 0.02 * (i % 2), 0.012), ice_shadow)
 
-        pond_radius_scale = 5.55 / 4.80
-        island_radius_scale = 2.35 / 1.95
+        pond_radius_scale = SCENE_LAYOUT["pond"]["radius_scale"]
+        island_radius_scale = SCENE_LAYOUT["island"]["radius_scale"]
         start = (2.45 * pond_radius_scale, 4.38 * pond_radius_scale)
         control = (2.02 * pond_radius_scale, 3.56 * pond_radius_scale)
         end = (1.02 * island_radius_scale, 1.78 * island_radius_scale)

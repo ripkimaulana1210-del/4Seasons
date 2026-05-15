@@ -1,13 +1,14 @@
 import math
 
-from ..data.scene_config import HOUSE_SPECS
+from ..data.scene_config import HOUSE_SPECS, SCENE_LAYOUT
 from ..models import ColorCube, ColorPlane, FireflyGlow, NightGlow, PondRock, SunDisc, WindStreak
 
 
 class SceneSpringObjectUpgradeMixin:
     def add_spring_flower_arch(self, app):
         colors = [(1.00, 0.64, 0.84), (1.00, 0.82, 0.92), (0.86, 0.62, 1.00), (0.92, 0.94, 0.46)]
-        base_x, base_z, yaw = (3.20, 5.55, -34.0)
+        pond_radius_scale = SCENE_LAYOUT["pond"]["radius_scale"]
+        base_x, base_z, yaw = (2.77 * pond_radius_scale, 4.80 * pond_radius_scale, -34.0)
         wood = (0.28, 0.18, 0.09)
         for side in (-1, 1):
             self.add_local_cube(app, base_x, base_z, yaw, side * 0.54, 0.64, 0.0, (0.030, 0.64, 0.030), wood)

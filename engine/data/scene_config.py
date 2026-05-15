@@ -172,17 +172,17 @@ SCENE_LAYOUT = {
         "repeat": (25.5, 25.5),
     },
     "pond": {
-        "radius_scale": 5.55 / 4.80,
+        "radius_scale": 6.22 / 4.80,
         "center": (0.0, 0.0, 0.0),
     },
     "island": {
-        "radius_scale": 2.35 / 1.95,
+        "radius_scale": 2.63 / 1.95,
         "center": (0.0, 0.0, 0.0),
     },
     "sakura_tree": {
         "pos": (0.0, 0.24, 0.0),
         "rot": (0.0, 0.0, 0.0),
-        "scale": (1.33, 1.33, 1.33),
+        "scale": (1.49, 1.49, 1.49),
     },
     "road": {
         "radius": 11.25,

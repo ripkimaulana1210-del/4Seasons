@@ -144,3 +144,9 @@ Generate preview gallery empat musim:
 ```powershell
 python tools\previews\generate_season_previews.py
 ```
+
+Generate preview denah/top-down per sektor/kotak dan sketsa isi tiap sektor:
+
+```powershell
+python tools\previews\generate_sector_previews.py --prefix scene_map --cols 4 --rows 4
+```

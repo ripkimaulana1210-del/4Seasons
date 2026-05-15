@@ -356,7 +356,7 @@ class SceneMicroSeasonMixin:
 
         for i in range(14):
             x = -1.9 + i * 0.30
-            z = 5.55 + 0.05 * math.sin(i)
+            z = 4.80 * pond_radius_scale + 0.05 * math.sin(i)
             self.add_object(
                 SunDisc(app, pos=(x, 0.074, z), rot=(90, i * 12.0, 0), scale=(0.18, 0.052, 1.0), color=frost, alpha=0.13),
                 tag="micro_bridge_frost",
@@ -396,4 +396,3 @@ class SceneMicroSeasonMixin:
                 tag="micro_aurora_thread",
                 layer="atmosphere",
             )
-
