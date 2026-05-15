@@ -7,6 +7,23 @@ import pygame as pg
 from ..core.paths import PROJECT_DIR
 
 
+DEFAULT_THEME_VOLUME = 0.34
+SEASON_THEME_PATHS = {
+    "early_spring": "assets/audio/spring_sparkle.mp3",
+    "spring": "assets/audio/spring_sparkle.mp3",
+    "hanami": "assets/audio/spring_sparkle.mp3",
+    "tsuyu": "assets/audio/spring_sparkle.mp3",
+    "summer": "assets/audio/summer_silhouette.mp3",
+    "midsummer": "assets/audio/summer_silhouette.mp3",
+    "late_summer": "assets/audio/summer_silhouette.mp3",
+    "autumn": "assets/audio/autumn_unravel.mp3",
+    "momiji": "assets/audio/autumn_unravel.mp3",
+    "first_frost": "assets/audio/winter_call_of_silence_cut.wav",
+    "winter": "assets/audio/winter_call_of_silence_cut.wav",
+    "deep_winter": "assets/audio/winter_call_of_silence_cut.wav",
+}
+
+
 class AudioManager:
     def __init__(self, muted=False):
         self.enabled = False
@@ -37,6 +54,23 @@ class AudioManager:
         if not path.is_absolute():
             path = PROJECT_DIR / path
         return path
+
+    def music_choice(self, season):
+        choices = []
+        season_theme = SEASON_THEME_PATHS.get(season.get("id"))
+        if season_theme:
+            choices.append((season_theme, DEFAULT_THEME_VOLUME))
+        if season.get("music_path"):
+            choices.append((season["music_path"], float(season.get("music_volume", DEFAULT_THEME_VOLUME))))
+        checked = set()
+        for path_value, volume in choices:
+            if path_value in checked:
+                continue
+            checked.add(path_value)
+            path = self.resolve_path(path_value)
+            if path is not None and path.exists():
+                return path, volume
+        return None, DEFAULT_THEME_VOLUME
 
     def generate_ambience(self, kind):
         mixer = pg.mixer.get_init()
@@ -195,32 +229,28 @@ class AudioManager:
             self.status = "Muted"
             return
 
-        ambience_on = self.start_ambience(season)
-        music_path = self.resolve_path(season.get("music_path"))
+        self.stop_ambience(fade_ms=300)
+        music_path, music_volume = self.music_choice(season)
         if music_path is None:
             self.stop_music()
-            self.status = f"Ambience: {season.get('name', season.get('id', 'season'))}" if ambience_on else "Tidak ada musik"
-            return
-
-        if not music_path.exists():
-            self.stop_music()
-            self.status = f"Ambience: {season.get('name', music_path.name)}" if ambience_on else f"File belum ada: {music_path.name}"
+            self.status = "Tidak ada musik"
             return
 
         if self.current_path == music_path and pg.mixer.music.get_busy():
-            self.status = f"Play: {music_path.name} + ambience" if ambience_on else f"Play: {music_path.name}"
+            pg.mixer.music.set_volume(music_volume)
+            self.status = f"Play: {music_path.name}"
             return
 
         try:
             pg.mixer.music.fadeout(500)
             pg.mixer.music.load(str(music_path))
-            pg.mixer.music.set_volume(season.get("music_volume", 0.45))
+            pg.mixer.music.set_volume(music_volume)
             pg.mixer.music.play(loops=-1, fade_ms=1200)
             self.current_path = music_path
-            self.status = f"Play: {music_path.name} + ambience" if ambience_on else f"Play: {music_path.name}"
+            self.status = f"Play: {music_path.name}"
         except pg.error:
             self.current_path = None
-            self.status = f"Ambience: {season.get('name', music_path.name)}" if ambience_on else f"Gagal play: {music_path.name}"
+            self.status = f"Gagal play: {music_path.name}"
 
     def toggle_mute(self, season):
         self.muted = not self.muted

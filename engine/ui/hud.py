@@ -1,3 +1,5 @@
+import math
+
 import pygame as pg
 import moderngl as mgl
 import numpy as np
@@ -7,8 +9,28 @@ from ..systems.season_transition_manager import transition_effect_family
 from .main_menu import MainMenu
 
 
+SEASON_HUD = {
+    "spring": {"accent": (255, 132, 184), "icon": "sakura"},
+    "early_spring": {"accent": (176, 220, 196), "icon": "sprout"},
+    "hanami": {"accent": (255, 152, 202), "icon": "sakura"},
+    "tsuyu": {"accent": (116, 178, 220), "icon": "rain"},
+    "summer": {"accent": (255, 196, 58), "icon": "sun"},
+    "midsummer": {"accent": (255, 174, 54), "icon": "sun"},
+    "late_summer": {"accent": (232, 178, 90), "icon": "leaf"},
+    "autumn": {"accent": (220, 112, 48), "icon": "leaf"},
+    "momiji": {"accent": (236, 84, 52), "icon": "leaf"},
+    "first_frost": {"accent": (162, 206, 226), "icon": "snow"},
+    "winter": {"accent": (120, 204, 255), "icon": "snow"},
+    "deep_winter": {"accent": (166, 212, 255), "icon": "snow"},
+}
+
+
+def clamp(value, lower, upper):
+    return max(lower, min(upper, value))
+
+
 class HUD:
-    def __init__(self, app, size=(520, 260), margin=14):
+    def __init__(self, app, size=(560, 286), margin=14):
         self.app = app
         self.ctx = app.ctx
         self.size = size
@@ -119,6 +141,74 @@ class HUD:
             text = text[:-1]
         return text + ellipsis
 
+    def season_style(self, season):
+        return SEASON_HUD.get(season.get("id"), {"accent": (232, 238, 244), "icon": "sakura"})
+
+    def draw_icon(self, surface, icon, center, color, size):
+        x, y = center
+        if icon == "sakura":
+            for angle in range(0, 360, 72):
+                vx = x + math.cos(math.radians(angle)) * size * 0.32
+                vy = y + math.sin(math.radians(angle)) * size * 0.32
+                pg.draw.circle(surface, (*color, 230), (int(vx), int(vy)), max(3, int(size * 0.16)))
+            pg.draw.circle(surface, (255, 235, 246, 240), (x, y), max(2, int(size * 0.10)))
+        elif icon == "sun":
+            for angle in range(0, 360, 45):
+                sx = x + math.cos(math.radians(angle)) * size * 0.34
+                sy = y + math.sin(math.radians(angle)) * size * 0.34
+                ex = x + math.cos(math.radians(angle)) * size * 0.56
+                ey = y + math.sin(math.radians(angle)) * size * 0.56
+                pg.draw.aaline(surface, (*color, 220), (sx, sy), (ex, ey))
+            pg.draw.circle(surface, (*color, 235), (x, y), max(5, int(size * 0.25)))
+        elif icon == "leaf":
+            points = [(x, y - size // 2), (x + size // 2, y), (x, y + size // 2), (x - size // 3, y)]
+            pg.draw.polygon(surface, (*color, 230), points)
+            pg.draw.aaline(surface, (255, 226, 185, 220), (x - size // 4, y), (x + size // 3, y))
+        elif icon == "rain":
+            cloud = pg.Rect(x - size // 2, y - size // 4, size, size // 2)
+            pg.draw.ellipse(surface, (*color, 210), cloud)
+            for offset in (-size // 4, 0, size // 4):
+                pg.draw.aaline(surface, (*color, 230), (x + offset, y + size * 0.20), (x + offset - 4, y + size * 0.48))
+        elif icon == "sprout":
+            pg.draw.aaline(surface, (*color, 230), (x, y + size * 0.42), (x, y - size * 0.18))
+            left = [(x, y - size * 0.05), (x - size * 0.38, y - size * 0.25), (x - size * 0.14, y + size * 0.12)]
+            right = [(x, y - size * 0.12), (x + size * 0.38, y - size * 0.32), (x + size * 0.14, y + size * 0.07)]
+            pg.draw.polygon(surface, (*color, 220), left)
+            pg.draw.polygon(surface, (*color, 220), right)
+        elif icon == "snow":
+            for angle in range(0, 180, 60):
+                dx = math.cos(math.radians(angle)) * size * 0.45
+                dy = math.sin(math.radians(angle)) * size * 0.45
+                pg.draw.aaline(surface, (*color, 230), (x - dx, y - dy), (x + dx, y + dy))
+            pg.draw.circle(surface, (236, 250, 255, 230), (x, y), max(2, int(size * 0.10)))
+        else:
+            pg.draw.circle(surface, (*color, 230), (x, y), max(5, int(size * 0.25)))
+
+    def draw_progress_bar(self, surface, rect, amount, color):
+        amount = clamp(amount, 0.0, 1.0)
+        pg.draw.rect(surface, (28, 34, 42, 220), rect, border_radius=rect.height // 2)
+        fill = pg.Rect(rect.x, rect.y, max(rect.height, int(rect.width * amount)), rect.height)
+        pg.draw.rect(surface, (*color, 210), fill, border_radius=rect.height // 2)
+
+    def draw_chip(self, surface, rect, text, color):
+        pg.draw.rect(surface, (13, 18, 25, 216), rect, border_radius=rect.height // 2)
+        pg.draw.rect(surface, (*color, 86), rect, width=1, border_radius=rect.height // 2)
+        label = self.fit_text(text, self.small_font, rect.width - 14)
+        rendered = self.small_font.render(label, True, (232, 238, 244))
+        surface.blit(rendered, rendered.get_rect(center=rect.center))
+
+    def draw_day_clock(self, surface, center, radius, phase, accent, night_amount):
+        pg.draw.circle(surface, (42, 48, 56, 220), center, radius)
+        pg.draw.circle(surface, (8, 13, 20, 170), center, radius - 2)
+        start = -90
+        end = start + int(360 * phase)
+        if end != start:
+            pg.draw.arc(surface, (*accent, 230), (center[0] - radius, center[1] - radius, radius * 2, radius * 2), math.radians(start), math.radians(end), 3)
+        sun_y = center[1] + int(math.sin(phase * math.tau - math.pi * 0.5) * radius * 0.42)
+        sun_x = center[0] + int(math.cos(phase * math.tau - math.pi * 0.5) * radius * 0.42)
+        body = (178, 205, 236) if night_amount > 0.45 else (255, 210, 92)
+        pg.draw.circle(surface, (*body, 240), (sun_x, sun_y), max(4, radius // 5))
+
     def hud_lines(self):
         season_controller = self.app.season_controller
         day_state = season_controller.day_state()
@@ -204,20 +294,115 @@ class HUD:
             )
         return lines
 
-    def update_texture(self):
-        surface = pg.Surface(self.size, flags=pg.SRCALPHA)
-        pg.draw.rect(surface, (11, 16, 21, 174), surface.get_rect(), border_radius=8)
-        pg.draw.rect(surface, (232, 238, 244, 56), surface.get_rect(), width=1, border_radius=8)
+    def hud_state(self):
+        season_controller = self.app.season_controller
+        day_state = season_controller.day_state()
+        hour = int((season_controller.day_time * 24.0) % 24.0)
+        minute = int(((season_controller.day_time * 24.0) % 1.0) * 60.0)
+        season = season_controller.get_blended_season()
+        period = (
+            "Malam"
+            if day_state["night"] > 0.55
+            else "Senja/Pagi"
+            if day_state["dusk"] > 0.45
+            else "Siang"
+        )
+        weather = season.get(
+            "weather_label",
+            "Hujan" if season.get("rain_enabled", False) else "Cerah",
+        )
+        if season_controller.is_transitioning:
+            snapshot = season_controller.transition_snapshot()
+            season_progress = season_controller.transition_progress
+            progress_label = f"Transisi {season_progress * 100:0.0f}%"
+            detail = snapshot["story"]
+        elif season_controller.time_lapse_enabled:
+            season_progress = season_controller.elapsed / max(0.001, season_controller.season_duration)
+            progress_label = f"Musim {season_progress * 100:0.0f}%"
+            detail = season.get("special_effect_label", season.get("emotion_title", "Season scene"))
+        else:
+            season_progress = 1.0
+            progress_label = "Manual"
+            detail = season.get("special_effect_label", season.get("emotion_title", "Season scene"))
 
-        x = 14
-        y = 12
-        max_width = self.size[0] - x * 2
-        for idx, line in enumerate(self.hud_lines()):
-            font = self.font if idx == 0 else self.small_font
-            color = (246, 249, 252) if idx == 0 else (210, 220, 226)
-            text = self.fit_text(line, font, max_width)
-            surface.blit(font.render(text, True, color), (x, y))
-            y += 24 if idx == 0 else 21
+        return {
+            "season": season,
+            "style": self.season_style(season),
+            "day_state": day_state,
+            "time": f"{hour:02d}:{minute:02d}",
+            "period": period,
+            "weather": weather,
+            "season_progress": season_progress,
+            "progress_label": progress_label,
+            "detail": detail,
+            "temperature": season_controller.temperature_c,
+            "season_mode": "AUTO" if season_controller.time_lapse_enabled else "MANUAL",
+            "day_mode": "AUTO" if season_controller.day_cycle_enabled else "MANUAL",
+            "camera": self.app.camera.preset_name.title(),
+            "quality": self.app.quality.name,
+            "fps": self.app.clock.get_fps(),
+            "audio": self.app.audio.status,
+        }
+
+    def draw_hud_surface(self):
+        surface = pg.Surface(self.size, flags=pg.SRCALPHA)
+        state = self.hud_state()
+        accent = state["style"]["accent"]
+        rect = surface.get_rect()
+
+        pg.draw.rect(surface, (8, 12, 18, 184), rect, border_radius=8)
+        pg.draw.rect(surface, (232, 238, 244, 58), rect, width=1, border_radius=8)
+        pg.draw.rect(surface, (*accent, 150), (0, 0, 5, rect.height), border_radius=4)
+
+        name = state["season"].get("name", "Season")
+        title = self.fit_text(name.upper(), self.title_font, 270)
+        surface.blit(self.title_font.render(title, True, (248, 251, 253)), (58, 16))
+        self.draw_icon(surface, state["style"]["icon"], (31, 35), accent, 34)
+        surface.blit(self.small_font.render(state["progress_label"], True, (214, 224, 230)), (60, 58))
+        self.draw_progress_bar(surface, pg.Rect(60, 80, 252, 9), state["season_progress"], accent)
+
+        detail = self.fit_text(state["detail"], self.small_font, 300)
+        surface.blit(self.small_font.render(detail, True, (196, 210, 218)), (16, 104))
+
+        time_panel = pg.Rect(332, 14, 210, 96)
+        pg.draw.rect(surface, (13, 18, 25, 212), time_panel, border_radius=8)
+        pg.draw.rect(surface, (255, 255, 255, 38), time_panel, width=1, border_radius=8)
+        self.draw_day_clock(surface, (374, 62), 28, state["day_state"]["phase"], accent, state["day_state"]["night"])
+        surface.blit(self.title_font.render(state["time"], True, (248, 251, 253)), (414, 27))
+        sub = f"{state['period']} | {state['weather']}"
+        surface.blit(self.small_font.render(self.fit_text(sub, self.small_font, 114), True, (202, 214, 222)), (416, 70))
+
+        temp = f"{state['temperature']:0.1f} C"
+        self.draw_chip(surface, pg.Rect(16, 136, 96, 28), temp, accent)
+        self.draw_chip(surface, pg.Rect(120, 136, 102, 28), f"FPS {state['fps']:0.0f}", (132, 214, 160))
+        self.draw_chip(surface, pg.Rect(230, 136, 128, 28), f"Quality {state['quality']}", (186, 198, 232))
+        self.draw_chip(surface, pg.Rect(366, 136, 84, 28), state["season_mode"], accent)
+        self.draw_chip(surface, pg.Rect(458, 136, 84, 28), f"Day {state['day_mode']}", (152, 204, 232))
+
+        status_text = f"Camera {state['camera']} | Audio {state['audio']}"
+        surface.blit(self.small_font.render(self.fit_text(status_text, self.small_font, 510), True, (210, 220, 226)), (16, 180))
+
+        controls = "H HUD  |  Esc Pause  |  1-4 Season  |  F1 Camera  |  F9 Quality  |  F10 Stats"
+        surface.blit(self.small_font.render(self.fit_text(controls, self.small_font, 510), True, (172, 188, 198)), (16, 204))
+
+        y = 232
+        if self.app.profile_visible:
+            stats = self.app.render_stats
+            profile = (
+                f"Draw {stats.get('draw_calls', 0)} | Obj {stats.get('visible', stats.get('objects', 0))}/"
+                f"{stats.get('objects', 0)} | Avg {self.app.fps_avg:0.1f} | {self.app.adaptive_quality_status}"
+            )
+            surface.blit(self.small_font.render(self.fit_text(profile, self.small_font, 510), True, (190, 202, 210)), (16, y))
+            y += 20
+        if self.app.editor.enabled:
+            selected = self.app.editor.selected_label()
+            editor = f"Editor {selected} | Arrows X/Z | PgUp/PgDn Y | [ ] select"
+            surface.blit(self.small_font.render(self.fit_text(editor, self.small_font, 510), True, (238, 218, 168)), (16, y))
+
+        return surface
+
+    def update_texture(self):
+        surface = self.draw_hud_surface()
 
         flipped = pg.transform.flip(surface, False, True)
         data = pg.image.tostring(flipped, "RGBA")

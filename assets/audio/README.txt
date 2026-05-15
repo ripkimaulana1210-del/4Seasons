@@ -1,12 +1,16 @@
 Seasonal audio folder.
 
-Recommended files:
-- assets/audio/autumn_memory.ogg: Musim Gugur (Belajar melepaskan)
-- assets/audio/spring_hope.ogg: Musim Semi (Harapan baru)
-- assets/audio/summer_courage.ogg: Musim Panas (Berani dan penuh tenaga)
-- assets/audio/winter_silence.ogg: Musim Dingin (Hening dan menerima)
+Active music files:
+- spring_sparkle.mp3: Spring / early spring / hanami / tsuyu.
+- summer_silhouette.mp3: Summer / midsummer / late summer.
+- autumn_unravel.mp3: Autumn / momiji.
+- winter_call_of_silence_cut.wav: First frost / winter / deep winter.
+
+Current behavior:
+- The game selects music by season group in engine/systems/audio_manager.py.
+- Procedural ambience is disabled because it sounded distracting.
+- Transition cue sounds are still generated in code.
 
 Current notes:
 - Pygame usually supports .mp3, .ogg, and .wav, depending on SDL_mixer.
-- Prefer .ogg for small looping ambience files.
-- Only use audio you are licensed to use.
+- winter_call_of_silence_cut.wav is the trimmed/compatible version used by Pygame.

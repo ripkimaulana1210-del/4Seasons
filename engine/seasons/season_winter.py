@@ -66,8 +66,6 @@ SEASON = {
     "rain_speed": 0.18,
     "rain_puddle_color": (0.82, 0.90, 0.94),
     "weather_label": "Bersalju",
-    "music_path": "assets/audio/Suzume.mp3",
-    "music_volume": 0.45,
     "special_effect_label": "Snow drift, frost fog, aurora, ice cracks",
     "ambient_particle_count": 84,
     "ambience_type": "winter",

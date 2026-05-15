@@ -23,7 +23,7 @@ def font_from(names, size, bold=False):
 
 
 MENU = {
-    "max_width": 1240,
+    "max_width": 1160,
     "bg_paths": (
         UI_DIR / "menu_background.png",
         UI_DIR / "game_cover.png",
@@ -175,15 +175,15 @@ class MainMenu:
 
     def layout(self):
         width, height = self.app.WIN_SIZE
-        content_w = min(MENU["max_width"], int(width * 0.90))
-        top = int(height * 0.075)
-        card_gap = int(clamp(width * 0.018, 12, 28))
+        content_w = min(MENU["max_width"], int(width * 0.86))
+        top = int(height * 0.070)
+        card_gap = int(clamp(width * 0.017, 14, 24))
         card_w = int((content_w - card_gap * 3) / 4)
-        card_h = int(clamp(min(height * 0.235, card_w * 0.58), 112, 188))
-        card_y = int(clamp(height * 0.430, 214, height - card_h - 184))
+        card_h = int(clamp(min(height * 0.205, card_w * 0.52), 108, 164))
+        card_y = int(clamp(height * 0.445, 220, height - card_h - 174))
         card_x = (width - (card_w * 4 + card_gap * 3)) // 2
         play_size = int(clamp(height * 0.108, 64, 86))
-        play_center = (width // 2, int(clamp(height * 0.785, card_y + card_h + 78, height - 82)))
+        play_center = (width // 2, int(clamp(height * 0.790, card_y + card_h + 74, height - 82)))
         settings_w = int(clamp(width * 0.118, 118, 158))
         settings_h = int(clamp(height * 0.052, 36, 46))
         settings = pg.Rect(width - settings_w - 26, 24, settings_w, settings_h)
@@ -261,17 +261,17 @@ class MainMenu:
         veil = pg.Surface((width, height), pg.SRCALPHA)
         for y in range(height):
             t = y / max(1, height - 1)
-            top = int(64 * max(0.0, 1.0 - t * 2.0))
-            bottom = int(132 * max(0.0, (t - 0.50) / 0.50))
-            center = int(24 * (1.0 - abs(t - 0.50) * 2.0))
-            alpha = clamp(top + bottom + center, 18, 154)
+            top = int(46 * max(0.0, 1.0 - t * 2.0))
+            bottom = int(94 * max(0.0, (t - 0.50) / 0.50))
+            center = int(14 * (1.0 - abs(t - 0.50) * 2.0))
+            alpha = clamp(top + bottom + center, 8, 112)
             pg.draw.line(veil, (4, 8, 15, int(alpha)), (0, y), (width, y))
         surface.blit(veil, (0, 0))
 
         vignette = pg.Surface((width, height), pg.SRCALPHA)
         edge = int(width * 0.18)
         for x in range(edge):
-            alpha = int(58 * (1.0 - x / max(1, edge)) ** 1.7)
+            alpha = int(36 * (1.0 - x / max(1, edge)) ** 1.7)
             pg.draw.line(vignette, (0, 0, 0, alpha), (x, 0), (x, height))
             pg.draw.line(vignette, (0, 0, 0, alpha), (width - x - 1, 0), (width - x - 1, height))
         surface.blit(vignette, (0, 0))
@@ -306,17 +306,17 @@ class MainMenu:
         layout = self.layout()
         width, height = layout["width"], layout["height"]
         top = layout["top"]
-        seasonal_size = int(clamp(height * 0.064, 38, 66))
-        sakura_size = int(clamp(height * 0.094, 54, 98))
-        subtitle_size = int(clamp(height * 0.031, 19, 30))
-        body_size = int(clamp(height * 0.021, 14, 20))
-        serif = font_from(("georgia", "timesnewroman", "garamond"), seasonal_size, bold=True)
+        seasonal_size = int(clamp(height * 0.056, 34, 56))
+        sakura_size = int(clamp(height * 0.082, 50, 84))
+        subtitle_size = int(clamp(height * 0.029, 18, 27))
+        body_size = int(clamp(height * 0.019, 13, 18))
+        title_top = font_from(("segoeuisemibold", "arial", "calibri"), seasonal_size, bold=True)
         title = font_from(("segoeuisemibold", "arial", "calibri"), sakura_size, bold=True)
         subtitle = font_from(("segoeui", "arial", "calibri"), subtitle_size, bold=False)
         body = font_from(("segoeui", "arial", "calibri"), body_size, bold=False)
 
-        self.draw_text(surface, "SEASONAL", serif, (width // 2, top + seasonal_size // 2), (250, 249, 245), glow=(255, 176, 212, 28))
-        self.draw_text(surface, "SAKURA", title, (width // 2, top + seasonal_size + sakura_size // 2 - 6), (255, 255, 255), glow=(255, 132, 190, 36))
+        self.draw_text(surface, "SEASONAL", title_top, (width // 2, top + seasonal_size // 2), (250, 249, 245), shadow=(0, 0, 0, 165))
+        self.draw_text(surface, "SAKURA", title, (width // 2, top + seasonal_size + sakura_size // 2 - 6), (255, 255, 255), shadow=(0, 0, 0, 170))
         self.draw_text(surface, "FOUR SEASONS GARDEN", subtitle, (width // 2, top + seasonal_size + sakura_size + subtitle_size // 2 + 8), (229, 238, 243))
         self.draw_text(
             surface,
@@ -362,26 +362,26 @@ class MainMenu:
             selected = self.selected_season_id == spec["id"]
             if hovered:
                 self.hovered_id = spec["id"]
-            scale = 1.045 if hovered else 1.025 if selected else 1.0
+            scale = 1.018 if hovered else 1.0
             rect = base_rect.inflate(int(base_rect.width * (scale - 1.0)), int(base_rect.height * (scale - 1.0)))
             color = spec["color"]
 
-            for spread, alpha in ((12, 14), (6, 28), (3, 48)):
+            for spread, alpha in ((7, 12), (3, 28)):
                 glow = pg.Surface((rect.width + spread * 2, rect.height + spread * 2), pg.SRCALPHA)
-                pg.draw.rect(glow, rgba(color, alpha + (18 if selected or hovered else 0)), glow.get_rect(), border_radius=14)
+                pg.draw.rect(glow, rgba(color, alpha + (12 if selected or hovered else 0)), glow.get_rect(), border_radius=9)
                 surface.blit(glow, (rect.x - spread, rect.y - spread))
 
-            image = self.cinematic_season_crop(index) or self.load_season_image(spec)
+            image = self.load_season_image(spec)
             if image is not None:
                 card = self.scale_fill(image, rect.size)
             else:
                 card = pg.Surface(rect.size, pg.SRCALPHA)
                 card.fill(rgba(color, 90))
             lift = pg.Surface(rect.size, pg.SRCALPHA)
-            lift.fill((255, 255, 255, 22))
+            lift.fill((255, 255, 255, 14))
             card.blit(lift, (0, 0))
             card_overlay = pg.Surface(rect.size, pg.SRCALPHA)
-            card_overlay.fill((0, 0, 0, 10))
+            card_overlay.fill((0, 0, 0, 18))
             card.blit(card_overlay, (0, 0))
             surface.blit(card, rect)
 
@@ -392,9 +392,9 @@ class MainMenu:
                 pg.draw.line(bottom, (3, 6, 11, alpha), (0, y), (rect.width, y))
             surface.blit(bottom, (rect.x, rect.bottom - bottom_h))
 
-            pg.draw.rect(surface, rgba(color, 235 if selected or hovered else 170), rect, width=2, border_radius=14)
+            pg.draw.rect(surface, rgba(color, 220 if selected or hovered else 145), rect, width=2 if selected or hovered else 1, border_radius=8)
             if selected:
-                pg.draw.rect(surface, (255, 255, 255, 110), rect.inflate(-6, -6), width=1, border_radius=11)
+                pg.draw.rect(surface, (255, 255, 255, 74), rect.inflate(-6, -6), width=1, border_radius=6)
 
             font = font_from(("segoeuisemibold", "arial", "calibri"), int(clamp(rect.height * 0.145, 18, 26)), bold=True)
             label = font.render(spec["label"], True, (250, 252, 255))
@@ -414,9 +414,9 @@ class MainMenu:
 
         glow = pg.Surface((draw_radius * 5, draw_radius * 5), pg.SRCALPHA)
         glow_center = (glow.get_width() // 2, glow.get_height() // 2)
-        for index, alpha in enumerate((14, 22, 30, 38)):
-            r = draw_radius + 36 - index * 9
-            pg.draw.circle(glow, (255, 126, 184, alpha + int(pulse * 6)), glow_center, r)
+        for index, alpha in enumerate((8, 14, 20)):
+            r = draw_radius + 24 - index * 8
+            pg.draw.circle(glow, (255, 126, 184, alpha + int(pulse * 4)), glow_center, r)
         surface.blit(glow, (center[0] - glow_center[0], center[1] - glow_center[1]))
 
         fill = (255, 246, 252, 246) if self.hovered_play else (255, 236, 247, 228)
@@ -433,7 +433,7 @@ class MainMenu:
         pg.draw.polygon(surface, (38, 20, 34), points)
 
         font = font_from(("segoeuisemibold", "arial", "calibri"), int(clamp(layout["height"] * 0.034, 22, 34)), bold=True)
-        self.draw_text(surface, "PLAY", font, (center[0], center[1] + draw_radius + 28), (255, 250, 253), glow=(255, 128, 184, 55))
+        self.draw_text(surface, "PLAY", font, (center[0], center[1] + draw_radius + 28), (255, 250, 253), shadow=(0, 0, 0, 170))
 
     def draw_settings_button(self, surface):
         rect = self.settings_button_rect()
@@ -466,7 +466,6 @@ class MainMenu:
         self.update_particles(delta_s)
         surface = pg.Surface(self.app.WIN_SIZE, pg.SRCALPHA)
         self.draw_background(surface)
-        self.draw_particles(surface)
         self.draw_title(surface)
         self.draw_season_cards(surface)
         self.draw_play_button(surface)
