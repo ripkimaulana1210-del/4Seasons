@@ -13,6 +13,15 @@ Project grafika komputer berbasis Python, Pygame, dan ModernGL. Scene menampilka
 - Camera preset, cinematic tour, orbit camera, fullscreen, dan screenshot export.
 - Profiling overlay, adaptive quality, quality setting tersimpan, pause menu, fog musiman, contact shadow, shadow mapping sederhana, post-processing bloom/tone polish, scene editor mini, distance culling, particle musiman, water shader musiman, ambience procedural per musim, camera preset musiman, cinematic route per musim, dan instanced rendering untuk objek warna statis.
 
+## Catatan Teknis Manajemen Musim
+
+- Sistem tidak menggunakan satu nilai blend global `t` dengan makna `0.0 = musim semi penuh` dan `1.0 = musim gugur penuh`.
+- Sistem memakai 4 state musim diskret: semi, panas, gugur, dingin.
+- Transisi terjadi per pasangan musim aktif (`semi->panas->gugur->dingin->semi`) dengan progres `0..1` dan easing cosine, bukan linear murni terhadap waktu.
+- Nilai atmosfer musiman (warna langit, awan, kabut, dan pencahayaan) diblend antara musim asal dan musim tujuan selama transisi aktif.
+- Posisi matahari/bulan mengikuti siklus siang-malam, bukan hasil lerp langsung antar musim.
+- Partikel utama berbeda per musim (semi: petal, panas: warm motes/fireflies, gugur: daun, dingin: salju), lalu ditambah partikel transisi spesifik saat pergantian musim.
+
 ## Instalasi
 
 Gunakan Python 3.11 atau versi yang kompatibel dengan dependency di `requirements.txt`.
