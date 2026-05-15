@@ -6,7 +6,7 @@ from ..models import ColorCube, ColorPlane, FireflyGlow, NightGlow, PondRock, Su
 
 class SceneSummerObjectUpgradeMixin:
     def add_summer_yatai(self, app):
-        base_x, base_z, yaw = (-9.6, 4.2, 62.0)
+        base_x, base_z, yaw = (9.8, 10.2, -24.0)
         wood = (0.38, 0.22, 0.10)
         dark = (0.18, 0.10, 0.05)
         red = (0.82, 0.12, 0.08)
@@ -27,7 +27,7 @@ class SceneSummerObjectUpgradeMixin:
 
     def add_summer_firefly_clusters(self, app):
         add = self.add_object
-        centers = [(-3.4, 0.92, 5.8), (-4.8, 1.05, 2.8), (4.6, 0.84, 5.9), (7.6, 1.10, -2.0), (-8.0, 0.96, -2.8), (2.2, 1.20, -5.0)]
+        centers = [(9.2, 0.92, 9.8), (10.5, 1.05, 10.5), (8.0, 0.84, 8.6), (4.6, 1.10, 5.9), (-3.4, 0.96, 5.8), (7.6, 1.20, -2.0)]
         for i in range(18):
             cx, cy, cz = centers[i % len(centers)]
             add(
@@ -60,8 +60,8 @@ class SceneSummerObjectUpgradeMixin:
 
     def add_summer_festival_banners(self, app):
         add = self.add_object
-        start = (-5.2, 1.38, 9.15)
-        end = (1.6, 1.38, 9.38)
+        start = (8.2, 1.38, 10.9)
+        end = (13.2, 1.38, 9.9)
         dx = end[0] - start[0]
         dz = end[2] - start[2]
         length = math.sqrt(dx * dx + dz * dz)
@@ -103,7 +103,7 @@ class SceneSummerObjectUpgradeMixin:
             add(NightGlow(app, pos=(x, 0.63, z), scale=(0.12, 0.12, 1.0), color=(1.00, 0.74, 0.24), alpha=0.28, pulse=0.16))
 
     def add_summer_kakigori_counter(self, app):
-        base_x, base_z, yaw = (-8.4, 5.45, 62.0)
+        base_x, base_z, yaw = (11.0, 9.2, -24.0)
         wood = (0.36, 0.20, 0.10)
         ice = (0.86, 0.96, 1.00)
         syrup_colors = [(0.94, 0.12, 0.18), (0.22, 0.58, 0.92), (0.36, 0.78, 0.32)]

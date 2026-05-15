@@ -276,9 +276,10 @@ def generate_game_cover() -> Path:
 def generate_menu_background() -> Path:
     width, height = 1920, 1080
     source = Image.open(PREVIEW_DIR / "season_spring.png")
-    canvas = crop_fill(source, (width, height), centering=(0.50, 0.48)).filter(ImageFilter.GaussianBlur(0.6)).convert("RGBA")
-    canvas.alpha_composite(alpha_rect((width, height), (4, 8, 15), 44))
-    canvas.alpha_composite(vertical_gradient((width, height), 72, 18, 92), (0, 0))
+    clean_source = source.crop((0, 0, source.width, int(source.height * 0.78)))
+    canvas = crop_fill(clean_source, (width, height), centering=(0.50, 0.42)).filter(ImageFilter.GaussianBlur(0.8)).convert("RGBA")
+    canvas.alpha_composite(alpha_rect((width, height), (4, 8, 15), 58))
+    canvas.alpha_composite(vertical_gradient((width, height), 86, 28, 150), (0, 0))
 
     UI_DIR.mkdir(parents=True, exist_ok=True)
     output = UI_DIR / "menu_background.png"

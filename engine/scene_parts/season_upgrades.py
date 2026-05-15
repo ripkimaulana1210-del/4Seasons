@@ -149,7 +149,7 @@ class SceneSeasonUpgradeMixin:
     def add_spring_identity_objects(self, app, pond_radius_scale):
         add = self.add_object
         umbrella_colors = [(1.0, 0.50, 0.74), (0.86, 0.62, 1.0), (1.0, 0.82, 0.44)]
-        for idx, (x, z, yaw) in enumerate(((-8.1, 5.9, -18.0), (-5.9, 7.1, 24.0), (5.2, -7.1, 12.0))):
+        for idx, (x, z, yaw) in enumerate(((-7.4, 6.2, -18.0), (-6.1, 7.4, 24.0), (-4.7, 6.5, 12.0))):
             add(ColorCube(app, pos=(x, 0.34, z), rot=(0, yaw, 0), scale=(0.018, 0.34, 0.018), color=(0.28, 0.17, 0.08)))
             for rib in range(6):
                 angle = yaw + rib * 60.0
@@ -164,9 +164,9 @@ class SceneSeasonUpgradeMixin:
                 )
             add(NightGlow(app, pos=(x, 0.74, z), scale=(0.20, 0.20, 1.0), color=(1.0, 0.62, 0.82), alpha=0.18, pulse=0.02))
 
-        for i in range(24):
-            angle = math.radians(35 + i * 7.8)
-            radius = (6.7 + 0.28 * math.sin(i)) * pond_radius_scale
+        for i in range(22):
+            angle = math.radians(34 + i * 6.8)
+            radius = (6.76 + 0.24 * math.sin(i)) * pond_radius_scale
             x = math.cos(angle) * radius
             z = math.sin(angle) * radius
             add(ColorCube(app, pos=(x, 0.14, z), rot=(18, math.degrees(angle), 8), scale=(0.016, 0.11, 0.010), color=(0.36, 0.66, 0.26)))
@@ -175,15 +175,15 @@ class SceneSeasonUpgradeMixin:
     def add_summer_identity_objects(self, app, pond_radius_scale):
         add = self.add_object
         lantern_colors = [(0.92, 0.18, 0.10), (1.0, 0.78, 0.30), (0.18, 0.42, 0.72)]
-        start_x, start_z = (-5.8, 9.2)
-        for i in range(10):
-            x = start_x + i * 0.74
-            z = start_z + 0.18 * math.sin(i * 0.7)
-            add(ColorCube(app, pos=(x, 1.26, z), rot=(0, 8, 0), scale=(0.030, 0.030, 0.36), color=(0.24, 0.14, 0.07)))
+        start_x, start_z = (8.2, 10.8)
+        for i in range(9):
+            x = start_x + i * 0.68
+            z = start_z + 0.16 * math.sin(i * 0.7)
+            add(ColorCube(app, pos=(x, 1.24, z), rot=(0, -24, 0), scale=(0.030, 0.030, 0.34), color=(0.24, 0.14, 0.07)))
             add(ColorCube(app, pos=(x, 1.02, z), rot=(0, i * 7.0, 0), scale=(0.090, 0.12, 0.070), color=lantern_colors[i % len(lantern_colors)]))
             add(NightGlow(app, pos=(x, 1.02, z), scale=(0.24, 0.24, 1.0), color=(1.0, 0.66, 0.28), alpha=0.22, pulse=0.05))
 
-        fan_x, fan_z = (7.0, 5.8)
+        fan_x, fan_z = (10.4, 8.8)
         add(ColorCube(app, pos=(fan_x, 0.42, fan_z), scale=(0.020, 0.42, 0.020), color=(0.30, 0.18, 0.08)))
         for i in range(7):
             angle = -42 + i * 14.0
@@ -192,7 +192,7 @@ class SceneSeasonUpgradeMixin:
     def add_autumn_identity_objects(self, app, pond_radius_scale):
         add = self.add_object
         leaves = self.season_value("autumn_leaf_colors", [(0.82, 0.32, 0.08), (0.94, 0.52, 0.12)])
-        pile_sites = [(-7.8, -5.8), (-3.2, 7.8), (6.6, 6.2), (8.2, -4.4)]
+        pile_sites = [(-1.8, 8.75), (0.8, 8.92), (3.4, 8.20), (6.6, 6.35)]
         for idx, (x, z) in enumerate(pile_sites):
             for i in range(10):
                 angle = i * math.tau / 10.0
@@ -209,8 +209,8 @@ class SceneSeasonUpgradeMixin:
             add(ColorCube(app, pos=(x - 0.24, 0.45, z + 0.05), rot=(0, idx * 18.0, 70), scale=(0.15, 0.012, 0.018), color=(0.72, 0.50, 0.20)))
 
         for i in range(18):
-            angle = math.radians(225 + i * 5.5)
-            radius = (7.0 + 0.42 * math.sin(i * 0.9)) * pond_radius_scale
+            angle = math.radians(210 + i * 5.7)
+            radius = (7.25 + 0.34 * math.sin(i * 0.9)) * pond_radius_scale
             add(
                 WindStreak(
                     app,
@@ -229,14 +229,14 @@ class SceneSeasonUpgradeMixin:
         add = self.add_object
         snow = self.season_color("winter_snow_color", (0.94, 0.97, 1.0))
         shadow = self.season_color("winter_snow_shadow_color", (0.78, 0.86, 0.92))
-        for x, z, yaw in ((-4.0, -3.1, 16.0), (2.9, 4.9, -18.0), (8.9, -6.9, -30.0)):
+        for x, z, yaw in ((-3.0, 6.3, 16.0), (2.8, 5.4, -18.0), (5.4, 3.9, -30.0)):
             for i, local_x in enumerate((-0.20, 0.0, 0.20)):
                 add(ColorCube(app, pos=(x + local_x, 0.86 - i * 0.04, z), rot=(0, yaw, 0), scale=(0.026, 0.20, 0.018), color=shadow))
             add(PondRock(app, pos=(x, 0.070, z), rot=(0, yaw, 0), scale=(0.34, 0.055, 0.24), color=snow))
 
-        for i in range(26):
-            angle = math.radians(175 + i * 7.4)
-            radius = (6.3 + 0.32 * math.sin(i * 1.3)) * pond_radius_scale
+        for i in range(24):
+            angle = math.radians(176 + i * 7.2)
+            radius = (6.46 + 0.26 * math.sin(i * 1.3)) * pond_radius_scale
             add(
                 PondRock(
                     app,

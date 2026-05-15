@@ -79,7 +79,7 @@ class SceneWinterObjectUpgradeMixin:
         snow = self.season_color("winter_snow_color", (0.94, 0.97, 1.0))
         stone = self.season_color("winter_snow_shadow_color", (0.78, 0.86, 0.92))
         water = (0.54, 0.78, 0.86)
-        center_x, center_z = (-9.65, -6.10)
+        center_x, center_z = (-11.1, -7.1)
         add(SunDisc(app, pos=(center_x, 0.062, center_z), rot=(90, -18, 0), scale=(0.62, 0.28, 1.0), color=water, alpha=0.30))
         for i in range(14):
             angle = i * math.tau / 14.0
@@ -113,7 +113,7 @@ class SceneWinterObjectUpgradeMixin:
         add = self.add_object
         ice = (0.74, 0.90, 0.98)
         shadow = self.season_color("winter_snow_shadow_color", (0.78, 0.86, 0.92))
-        ledge_x, ledge_z, yaw = (-9.25, -5.45, -38.0)
+        ledge_x, ledge_z, yaw = (-11.5, -6.8, -38.0)
         add(SunDisc(app, pos=(ledge_x - 0.24, 0.070, ledge_z - 0.40), rot=(90, yaw, 0), scale=(0.52, 0.20, 1.0), color=ice, alpha=0.24))
         for i, offset in enumerate((-0.30, -0.16, -0.02, 0.14, 0.30)):
             add(

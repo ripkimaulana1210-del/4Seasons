@@ -277,14 +277,14 @@ class SceneVillagePropMixin:
         snow = self.season_color("winter_snow_color", (0.94, 0.97, 1.00))
         road_exits = (0.0, 90.0, 180.0, 270.0)
 
-        for i in range(30):
-            angle_deg = (i * 360.0 / 30.0 + 4.5 * math.sin(i * 1.6)) % 360.0
+        for i in range(22):
+            angle_deg = (i * 360.0 / 22.0 + 4.5 * math.sin(i * 1.6)) % 360.0
             gap = min(abs(((angle_deg - road + 180.0) % 360.0) - 180.0) for road in road_exits)
             if gap < 8.0:
                 continue
 
             angle = math.radians(angle_deg)
-            radius = 15.6 + 2.35 * (0.5 + 0.5 * math.sin(i * 2.13))
+            radius = 21.1 + 2.60 * (0.5 + 0.5 * math.sin(i * 2.13))
             x = math.cos(angle) * radius
             z = math.sin(angle) * radius
             tree_scale = 0.24 + 0.08 * (0.5 + 0.5 * math.cos(i * 1.31))
@@ -308,14 +308,14 @@ class SceneVillagePropMixin:
                     )
                 )
 
-        for i in range(72):
-            angle_deg = (i * 360.0 / 72.0 + 2.2 * math.sin(i * 0.9)) % 360.0
+        for i in range(44):
+            angle_deg = (i * 360.0 / 44.0 + 2.2 * math.sin(i * 0.9)) % 360.0
             gap = min(abs(((angle_deg - road + 180.0) % 360.0) - 180.0) for road in road_exits)
             if gap < 5.0 and i % 2 == 0:
                 continue
 
             angle = math.radians(angle_deg)
-            radius = 13.9 + 4.3 * ((i * 37) % 100) / 100.0
+            radius = 20.3 + 4.1 * ((i * 37) % 100) / 100.0
             x = math.cos(angle) * radius
             z = math.sin(angle) * radius
             size = 0.78 + 0.22 * math.sin(i * 1.7) ** 2
@@ -357,8 +357,8 @@ class SceneVillagePropMixin:
                 add(ColorCube(app, pos=(x, 0.800, z), rot=(0, yaw, 0), scale=(0.30, 0.016, 0.040), color=snow))
 
         stall_specs = [
-            (-1.70, 10.45, 8.0),
-            (1.85, -10.25, 188.0),
+            (-2.40, 13.70, 8.0),
+            (2.50, -13.60, 188.0),
         ]
         canopy_colors = [
             self.season_color("transition_color", (0.92, 0.42, 0.14)),
@@ -410,7 +410,7 @@ class SceneVillagePropMixin:
                 glow_alpha=0.42,
             )
 
-        well_x, well_z = (-8.35, 4.95)
+        well_x, well_z = (-10.45, 6.15)
         for stone_idx in range(12):
             angle = stone_idx * math.tau / 12.0
             add(

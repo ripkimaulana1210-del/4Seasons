@@ -49,7 +49,7 @@ class SceneAutumnObjectUpgradeMixin:
 
     def add_autumn_harvest_display(self, app):
         add = self.add_object
-        base_x, base_z, yaw = (-10.15, -4.10, 42.0)
+        base_x, base_z, yaw = (-12.8, -5.2, 42.0)
         wood = (0.34, 0.18, 0.08)
         straw = (0.78, 0.58, 0.24)
         pumpkin_colors = [(0.90, 0.42, 0.10), (0.76, 0.30, 0.08), (0.96, 0.60, 0.16)]

@@ -45,7 +45,7 @@ class SceneVillageSettlementMixin:
         lane_color = self.season_color("lane_color", (0.43, 0.38, 0.30))
         edge_color = self.season_color("road_edge_color", (0.51, 0.49, 0.43))
 
-        ring_segments = 64
+        ring_segments = 56
         for i in range(ring_segments):
             a0 = 2.0 * math.pi * i / ring_segments
             a1 = 2.0 * math.pi * (i + 1) / ring_segments
@@ -54,10 +54,11 @@ class SceneVillageSettlementMixin:
             self.add_road_segment(app, start, end, road_width, road_color)
 
         # Jalan utama dan beberapa cabang keluar dari pemukiman.
-        self.add_road_segment(app, (0.0, road_radius + 0.20), (0.0, 18.5), 1.45, road_color)
-        self.add_road_segment(app, (road_radius + 0.20, 0.0), (17.7, 1.45), 1.14, road_color)
-        self.add_road_segment(app, (-road_radius - 0.20, 0.0), (-17.7, -1.20), 1.14, road_color)
-        self.add_road_segment(app, (0.0, -road_radius - 0.20), (-1.65, -18.5), 1.14, road_color)
+        self.add_road_segment(app, (0.0, road_radius + 0.20), (0.0, 23.4), 1.45, road_color)
+        self.add_road_segment(app, (road_radius + 0.20, 0.0), (22.4, 1.65), 1.14, road_color)
+        self.add_road_segment(app, (-road_radius - 0.20, 0.0), (-22.4, -1.35), 1.14, road_color)
+        self.add_road_segment(app, (0.0, -road_radius - 0.20), (-1.95, -23.2), 1.14, road_color)
+        self.add_main_view_guides(app, road_radius, road_width, lane_color)
 
         bridge_start = (2.45 * pond_radius_scale, 4.38 * pond_radius_scale)
         bridge_angle = math.atan2(bridge_start[1], bridge_start[0])
@@ -67,8 +68,8 @@ class SceneVillageSettlementMixin:
         )
         self.add_road_segment(app, bridge_start, bridge_ring, 0.92, lane_color)
 
-        for i in range(48):
-            angle = 2.0 * math.pi * i / 48.0
+        for i in range(32):
+            angle = 2.0 * math.pi * i / 32.0
             for side in (-1, 1):
                 radius = road_radius + side * road_width * 0.62
                 add(
@@ -135,3 +136,28 @@ class SceneVillageSettlementMixin:
 
         self.add_village_activity_details(app, road_radius, road_width)
         self.add_outer_grove(app)
+
+    def add_main_view_guides(self, app, road_radius, road_width, lane_color):
+        add = self.add_object
+        snow = self.season_color("winter_snow_color", (0.94, 0.97, 1.00))
+        stone_color = snow if self.is_winter() else self.season_color("road_edge_color", (0.50, 0.48, 0.42))
+
+        for idx, z in enumerate((12.6, 14.0, 15.5, 17.0, 18.6, 20.2, 21.7)):
+            x = 0.08 * math.sin(idx * 1.4)
+            add(
+                PondRock(
+                    app,
+                    pos=(x, 0.045, z),
+                    rot=(0, idx * 17.0, 0),
+                    scale=(0.23, 0.038, 0.16),
+                    color=stone_color if idx % 2 else lane_color,
+                )
+            )
+
+        for idx, (x, z, yaw) in enumerate(((-0.86, 13.1, 2.0), (0.86, 15.5, -2.0), (-0.92, 18.0, 2.0), (0.92, 20.5, -2.0))):
+            self.add_garden_lantern(
+                app,
+                (x, z),
+                scale=0.54 + 0.03 * (idx % 2),
+                yaw=yaw,
+            )

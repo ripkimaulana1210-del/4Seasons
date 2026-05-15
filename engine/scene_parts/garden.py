@@ -116,27 +116,40 @@ class SceneGardenMixin:
         ]
         snow = self.season_color("winter_snow_color", (0.94, 0.97, 1.00))
 
-        for i in range(72):
-            angle_deg = (i * 360.0 / 72.0) + 3.0 * math.sin(i * 1.31)
-            angle = math.radians(angle_deg)
-            radius = (5.18 + 0.16 * math.sin(i * 0.9) + 0.08 * math.cos(i * 2.1)) * pond_radius_scale
-            x = math.cos(angle) * radius
-            z = math.sin(angle) * radius
-            size = 0.70 + 0.34 * (0.5 + 0.5 * math.sin(i * 1.7))
-            color = snow if self.is_winter() and i % 4 == 0 else base_colors[i % len(base_colors)]
-            add(
-                PondRock(
-                    app,
-                    pos=(x, 0.040 + 0.012 * (i % 3), z),
-                    rot=(0, angle_deg + i * 17.0, 0),
-                    scale=(
-                        (0.080 + 0.030 * math.sin(i * 0.8) ** 2) * size,
-                        (0.030 + 0.010 * math.cos(i * 1.2) ** 2) * size,
-                        (0.060 + 0.026 * math.cos(i * 0.7) ** 2) * size,
-                    ),
-                    color=color,
+        cluster_specs = [
+            (28, 4),
+            (68, 5),
+            (118, 4),
+            (166, 4),
+            (218, 5),
+            (264, 4),
+            (312, 5),
+            (344, 3),
+        ]
+        rock_index = 0
+        for center_deg, count in cluster_specs:
+            for local_idx in range(count):
+                angle_deg = center_deg + (local_idx - (count - 1) * 0.5) * 4.2 + 1.8 * math.sin(rock_index)
+                angle = math.radians(angle_deg)
+                radius = (5.20 + 0.15 * math.sin(rock_index * 0.9) + 0.06 * math.cos(local_idx * 2.1)) * pond_radius_scale
+                x = math.cos(angle) * radius
+                z = math.sin(angle) * radius
+                size = 0.66 + 0.28 * (0.5 + 0.5 * math.sin(rock_index * 1.7))
+                color = snow if self.is_winter() and rock_index % 4 == 0 else base_colors[rock_index % len(base_colors)]
+                add(
+                    PondRock(
+                        app,
+                        pos=(x, 0.040 + 0.010 * (rock_index % 3), z),
+                        rot=(0, angle_deg + rock_index * 17.0, 0),
+                        scale=(
+                            (0.080 + 0.026 * math.sin(rock_index * 0.8) ** 2) * size,
+                            (0.030 + 0.009 * math.cos(rock_index * 1.2) ** 2) * size,
+                            (0.060 + 0.022 * math.cos(rock_index * 0.7) ** 2) * size,
+                        ),
+                        color=color,
+                    )
                 )
-            )
+                rock_index += 1
 
     def add_wild_grass_at_water_edge(self, app, pond_radius_scale):
         add = self.add_object
@@ -153,28 +166,40 @@ class SceneGardenMixin:
                 (0.44, 0.58, 0.25),
             ]
 
-        for cluster in range(46):
-            angle_deg = (cluster * 360.0 / 46.0) + 5.5 * math.sin(cluster * 0.73)
-            angle = math.radians(angle_deg)
-            base_radius = (5.38 + 0.18 * math.sin(cluster * 1.8)) * pond_radius_scale
-            blade_count = 4 + (cluster % 4)
+        grass_groups = [
+            (42, 3),
+            (86, 4),
+            (134, 3),
+            (202, 4),
+            (238, 3),
+            (292, 4),
+            (330, 3),
+        ]
+        cluster = 0
+        for center_deg, tuft_count in grass_groups:
+            for tuft in range(tuft_count):
+                angle_deg = center_deg + (tuft - (tuft_count - 1) * 0.5) * 5.4 + 2.8 * math.sin(cluster * 0.73)
+                angle = math.radians(angle_deg)
+                base_radius = (5.44 + 0.14 * math.sin(cluster * 1.8)) * pond_radius_scale
+                blade_count = 3 + (cluster % 2)
 
-            for blade in range(blade_count):
-                blade_angle = angle + math.radians((blade - blade_count * 0.5) * 2.2)
-                radius = base_radius + 0.08 * math.sin(blade * 1.4 + cluster)
-                x = math.cos(blade_angle) * radius
-                z = math.sin(blade_angle) * radius
-                height = 0.085 + 0.032 * ((blade + cluster) % 3)
-                lean = -18.0 + blade * 8.0 + 8.0 * math.sin(cluster)
-                add(
-                    ColorCube(
-                        app,
-                        pos=(x, 0.040 + height, z),
-                        rot=(lean, angle_deg + 90.0 + blade * 9.0, 10.0 * math.sin(blade + cluster)),
-                        scale=(0.010, height, 0.006),
-                        color=grass_colors[(cluster + blade) % len(grass_colors)],
+                for blade in range(blade_count):
+                    blade_angle = angle + math.radians((blade - blade_count * 0.5) * 2.2)
+                    radius = base_radius + 0.07 * math.sin(blade * 1.4 + cluster)
+                    x = math.cos(blade_angle) * radius
+                    z = math.sin(blade_angle) * radius
+                    height = 0.078 + 0.030 * ((blade + cluster) % 3)
+                    lean = -18.0 + blade * 8.0 + 8.0 * math.sin(cluster)
+                    add(
+                        ColorCube(
+                            app,
+                            pos=(x, 0.040 + height, z),
+                            rot=(lean, angle_deg + 90.0 + blade * 9.0, 10.0 * math.sin(blade + cluster)),
+                            scale=(0.010, height, 0.006),
+                            color=grass_colors[(cluster + blade) % len(grass_colors)],
+                        )
                     )
-                )
+                cluster += 1
 
     def add_pond_flowers(self, app, pond_radius_scale):
         add = self.add_object
@@ -190,17 +215,13 @@ class SceneGardenMixin:
 
         # Kluster bunga diletakkan di tepi luar danau dengan fokus ke area yang terlihat kamera.
         cluster_specs = [
-            (84, 5.94 * pond_radius_scale, 6, 0.28, 0, 1.08),
-            (104, 5.96 * pond_radius_scale, 7, 0.28, 0, 1.02),
-            (128, 6.02 * pond_radius_scale, 6, 0.24, 1, 0.96),
-            (154, 6.08 * pond_radius_scale, 5, 0.20, 2, 0.92),
-            (188, 6.18 * pond_radius_scale, 7, 0.26, 0, 1.00),
-            (222, 6.34 * pond_radius_scale, 6, 0.28, 3, 1.08),
-            (256, 6.20 * pond_radius_scale, 5, 0.22, 1, 0.90),
-            (292, 6.06 * pond_radius_scale, 6, 0.20, 2, 0.96),
-            (330, 6.02 * pond_radius_scale, 5, 0.18, 0, 0.88),
-            (16, 6.20 * pond_radius_scale, 6, 0.19, 3, 0.92),
-            (34, 6.28 * pond_radius_scale, 4, 0.18, 1, 0.86),
+            (88, 5.94 * pond_radius_scale, 4, 0.25, 0, 1.02),
+            (122, 6.02 * pond_radius_scale, 4, 0.22, 1, 0.94),
+            (164, 6.08 * pond_radius_scale, 3, 0.18, 2, 0.90),
+            (212, 6.30 * pond_radius_scale, 4, 0.24, 3, 1.02),
+            (258, 6.18 * pond_radius_scale, 3, 0.20, 1, 0.88),
+            (304, 6.08 * pond_radius_scale, 4, 0.18, 2, 0.92),
+            (342, 6.16 * pond_radius_scale, 3, 0.17, 0, 0.86),
         ]
 
         for cluster_idx, (angle_deg, radius, count, spread, palette_idx, height_bias) in enumerate(cluster_specs):
@@ -667,7 +688,7 @@ class SceneGardenMixin:
                         spin=offset_angle,
                     )
 
-        for arc_idx in range(24):
+        for arc_idx in range(16):
             angle_deg = 208 + arc_idx * 4.1
             hedge_x, hedge_z = polar(angle_deg, 7.95 + 0.05 * math.sin(arc_idx))
             add(
@@ -684,7 +705,7 @@ class SceneGardenMixin:
             for bed_idx, angle_deg in enumerate((214, 228, 286, 302)):
                 outer, inner, center = flower_palettes[(bed_idx + 1) % len(flower_palettes)]
                 base_x, base_z = polar(angle_deg, 6.62)
-                for flower_idx in range(7):
+                for flower_idx in range(4):
                     fan = math.radians(angle_deg + (flower_idx - 3) * 5.0)
                     spread = 0.16 + 0.05 * (flower_idx % 3)
                     self.add_garden_flower(

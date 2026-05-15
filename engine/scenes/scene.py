@@ -299,7 +299,7 @@ class Scene(
 
         # Semak rendah di sisi belakang kolam agar frame tidak kosong.
         bush_color = self.season_color("bush_color", (0.25, 0.40, 0.20))
-        for i in range(18):
+        for i in range(12):
             angle = math.radians(188 + i * 10.0)
             radius = (5.85 + 0.35 * math.sin(i * 1.7)) * pond_radius_scale
             add(
@@ -320,8 +320,8 @@ class Scene(
                 )
             )
 
-        for i in range(9):
-            angle = math.radians(202 + i * 15.0)
+        for i in range(5):
+            angle = math.radians(208 + i * 22.0)
             radius = (5.35 + 0.20 * math.cos(i)) * pond_radius_scale
             add(
                 PondRock(
@@ -457,7 +457,7 @@ class Scene(
             ((-4.45 * pond_radius_scale, 0.030, -2.55 * pond_radius_scale), (0.72, 0.30, 1.0), 0.15),
         ]
 
-        for angle_deg in range(20, 360, 30):
+        for angle_deg in range(20, 360, 40):
             angle = math.radians(angle_deg)
             specs.append(
                 (

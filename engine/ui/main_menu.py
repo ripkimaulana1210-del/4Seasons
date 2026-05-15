@@ -33,28 +33,40 @@ MENU = {
         {
             "id": "spring",
             "label": "SEMI",
-            "image": PROJECT_DIR / "docs" / "previews" / "season_spring.png",
+            "images": (
+                UI_DIR / "menu_spring.png",
+                PROJECT_DIR / "docs" / "previews" / "season_spring.png",
+            ),
             "color": (255, 128, 184),
             "icon": "sakura",
         },
         {
             "id": "summer",
             "label": "PANAS",
-            "image": PROJECT_DIR / "docs" / "previews" / "season_summer.png",
+            "images": (
+                UI_DIR / "menu_summer.png",
+                PROJECT_DIR / "docs" / "previews" / "season_summer.png",
+            ),
             "color": (255, 196, 58),
             "icon": "sun",
         },
         {
             "id": "autumn",
             "label": "GUGUR",
-            "image": PROJECT_DIR / "docs" / "previews" / "season_autumn.png",
+            "images": (
+                UI_DIR / "menu_autumn.png",
+                PROJECT_DIR / "docs" / "previews" / "season_autumn.png",
+            ),
             "color": (220, 112, 48),
             "icon": "leaf",
         },
         {
             "id": "winter",
             "label": "DINGIN",
-            "image": PROJECT_DIR / "docs" / "previews" / "season_winter.png",
+            "images": (
+                UI_DIR / "menu_winter.png",
+                PROJECT_DIR / "docs" / "previews" / "season_winter.png",
+            ),
             "color": (120, 204, 255),
             "icon": "snow",
         },
@@ -151,13 +163,15 @@ class MainMenu:
         if key in self.season_images:
             return self.season_images[key]
 
-        path = spec["image"]
-        if path.exists():
+        paths = spec.get("images", (spec.get("image"),))
+        for path in paths:
+            if path is None or not path.exists():
+                continue
             try:
                 self.season_images[key] = pg.image.load(str(path)).convert_alpha()
                 return self.season_images[key]
             except pg.error:
-                pass
+                continue
         self.season_images[key] = None
         return None
 

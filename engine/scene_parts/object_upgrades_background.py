@@ -45,19 +45,25 @@ class SceneBackgroundUpgradeMixin:
             self.season_color("garden_rich_lawn_color", (0.25, 0.42, 0.20)),
             self.season_color("garden_hedge_color", (0.24, 0.42, 0.18)),
         ]
-        for cluster in range(9):
-            base_x = -9.8 + cluster * 2.35
-            base_z = 15.1 + 0.35 * math.sin(cluster * 1.4)
-            for blade in range(7):
+        framing_clusters = [
+            (-10.8, 17.8),
+            (-8.4, 18.2),
+            (-6.1, 17.5),
+            (6.1, 17.4),
+            (8.7, 18.0),
+            (11.0, 17.6),
+        ]
+        for cluster, (base_x, base_z) in enumerate(framing_clusters):
+            for blade in range(5):
                 angle = -28.0 + blade * 9.0 + cluster * 3.0
-                height = 0.16 + 0.05 * ((cluster + blade) % 3)
+                height = 0.14 + 0.045 * ((cluster + blade) % 3)
                 add(
                     ColorCube(
                         app,
                         pos=(
-                            base_x + 0.18 * math.cos(blade),
+                            base_x + 0.20 * math.cos(blade),
                             0.05 + height,
-                            base_z + 0.11 * math.sin(blade * 1.7),
+                            base_z + 0.12 * math.sin(blade * 1.7),
                         ),
                         rot=(12.0 * math.sin(blade), angle, 10.0 * math.cos(cluster)),
                         scale=(0.018, height, 0.010),
