@@ -6,6 +6,7 @@ PROJECT_DIR = ENGINE_DIR.parent
 ASSETS_DIR = PROJECT_DIR / "assets"
 SHADER_DIR = ASSETS_DIR / "shaders"
 TEXTURE_DIR = ASSETS_DIR / "textures"
+UI_DIR = ASSETS_DIR / "ui"
 AUDIO_DIR = ASSETS_DIR / "audio"
 SCREENSHOT_DIR = PROJECT_DIR / "docs" / "previews"
 CONFIG_DIR = PROJECT_DIR / "config"

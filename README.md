@@ -29,6 +29,8 @@ pip install -r requirements.txt
 python main.py
 ```
 
+Saat window game terbuka, pilih kartu musim jika perlu, lalu klik tombol `Play` pada cover untuk masuk ke scene utama.
+
 Alternatif cepat di Windows:
 
 ```powershell
@@ -89,6 +91,7 @@ assets/
   audio/       Musik dan catatan audio.
   shaders/     GLSL shader.
   textures/    Texture PNG.
+  ui/          Cover game dan asset UI.
 docs/
   previews/    Preview render dan output screenshot.
 config/

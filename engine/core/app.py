@@ -41,10 +41,7 @@ class SxvxnEngine:
         self.frame_count = 0
         self.fps_avg = 0.0
         self.fps_min = 0.0
-        self.startup_overlay_start = pg.time.get_ticks() * 0.001
-        self.startup_overlay_duration = 4.2
-        self.startup_overlay_fade = 0.75
-        self.startup_overlay_skipped = False
+        self.game_started = False
 
         pg.display.gl_set_attribute(pg.GL_CONTEXT_MAJOR_VERSION, 3)
         pg.display.gl_set_attribute(pg.GL_CONTEXT_MINOR_VERSION, 3)
@@ -59,8 +56,8 @@ class SxvxnEngine:
             display_flags = pg.OPENGL | pg.DOUBLEBUF | pg.FULLSCREEN
         pg.display.set_mode(self.WIN_SIZE, flags=display_flags)
 
-        pg.event.set_grab(True)
-        pg.mouse.set_visible(False)
+        pg.event.set_grab(False)
+        pg.mouse.set_visible(True)
 
         self.ctx = mgl.create_context(require=330)
         self.ctx.enable(flags=mgl.DEPTH_TEST | mgl.BLEND)
@@ -100,7 +97,6 @@ class SxvxnEngine:
         self.scene_renderer.shadow_renderer.enabled = bool(self.settings.get("shadow", True))
         self.editor = SceneEditor(self)
         self.hud = HUD(self)
-        self.audio.apply_season(season)
         self.season_controller.update_caption(force=True)
 
     def apply_season(self):
@@ -125,7 +121,24 @@ class SxvxnEngine:
         sys.exit()
 
     def toggle_pause(self):
+        if not self.game_started:
+            return
         self.paused = not self.paused
+        pg.mouse.get_rel()
+
+    def start_game(self, season_id=None):
+        self.game_started = True
+        if season_id:
+            self.season_controller.current_index = self.season_controller.index_for_id(season_id)
+            self.season_controller.transition_manager.reset()
+            self.season_controller.elapsed = 0.0
+            self.season_controller.temperature_c = self.season_controller.calculate_temperature()
+            self.apply_season()
+        else:
+            self.audio.apply_season(self.season_controller.current)
+        self.season_controller.update_caption(force=True)
+        pg.mouse.set_visible(False)
+        pg.event.set_grab(True)
         pg.mouse.get_rel()
 
     def cycle_quality(self):
@@ -186,19 +199,7 @@ class SxvxnEngine:
         self.settings.set("shadow", self.scene_renderer.shadow_renderer.enabled)
 
     def startup_overlay_alpha(self):
-        if self.startup_overlay_skipped:
-            return 0.0
-
-        elapsed = max(0.0, self.time - self.startup_overlay_start)
-        if elapsed >= self.startup_overlay_duration:
-            return 0.0
-
-        fade = max(0.01, self.startup_overlay_fade)
-        if elapsed < fade:
-            return elapsed / fade
-        if elapsed > self.startup_overlay_duration - fade:
-            return max(0.0, (self.startup_overlay_duration - elapsed) / fade)
-        return 1.0
+        return 0.0 if self.game_started else 1.0
 
     def update_adaptive_quality(self):
         if not self.adaptive_quality_enabled or self.delta_time <= 0:
@@ -253,17 +254,35 @@ class SxvxnEngine:
             if event.type == pg.QUIT:
                 self.quit()
 
+            if event.type == pg.VIDEORESIZE and not self.fullscreen:
+                self.windowed_size = event.size
+                self.resize(event.size)
+                continue
+
+            if not self.game_started:
+                if event.type == pg.KEYDOWN and event.key == pg.K_ESCAPE:
+                    self.quit()
+                if event.type == pg.KEYDOWN and event.key == pg.K_F11:
+                    self.toggle_fullscreen()
+                    pg.event.set_grab(False)
+                    pg.mouse.set_visible(True)
+                    continue
+                if event.type == pg.MOUSEMOTION:
+                    self.hud.invalidate_startup_texture()
+                if event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
+                    result = self.hud.handle_menu_input(event)
+                    if result["action"] == "play":
+                        self.start_game(result.get("season_id"))
+                    elif result["action"] == "none":
+                        self.hud.invalidate_startup_texture()
+                continue
+
             if event.type == pg.KEYDOWN and event.key == pg.K_ESCAPE:
                 self.toggle_pause()
                 continue
 
             if self.paused and event.type == pg.KEYDOWN and event.key == pg.K_q:
                 self.quit()
-
-            if event.type == pg.KEYDOWN and event.key in (pg.K_RETURN, pg.K_SPACE):
-                if self.startup_overlay_alpha() > 0.0:
-                    self.startup_overlay_skipped = True
-                    continue
 
             if event.type == pg.KEYDOWN and self.editor.handle_key(event.key):
                 continue
@@ -313,10 +332,6 @@ class SxvxnEngine:
                 pg.mouse.set_visible(visible)
                 pg.event.set_grab(not visible)
 
-            if event.type == pg.VIDEORESIZE and not self.fullscreen:
-                self.windowed_size = event.size
-                self.resize(event.size)
-
             if event.type == pg.MOUSEBUTTONDOWN and self.camera.use_orbit:
                 if event.button == 4:
                     self.camera.orbit_radius = max(2.0, self.camera.orbit_radius - 0.5)
@@ -324,13 +339,21 @@ class SxvxnEngine:
                     self.camera.orbit_radius = min(40.0, self.camera.orbit_radius + 0.5)
 
     def render(self):
+        if not self.game_started:
+            self.ctx.screen.use()
+            self.ctx.viewport = (0, 0, self.WIN_SIZE[0], self.WIN_SIZE[1])
+            self.ctx.clear(color=(0.02, 0.03, 0.05))
+            self.hud.render(show_panel=False)
+            pg.display.flip()
+            return
+
         self.post_processor.begin()
         self.ctx.clear(color=self.background_color)
         self.scene_renderer.render()
         self.season_controller.render_transition_effects()
         self.post_processor.render()
-        if self.hud_visible:
-            self.hud.render()
+        if self.hud_visible or self.paused or self.startup_overlay_alpha() > 0.0:
+            self.hud.render(show_panel=self.hud_visible)
         if self.screenshot_requested:
             self.save_screenshot()
         pg.display.flip()
@@ -362,10 +385,11 @@ class SxvxnEngine:
         while True:
             self.get_time()
             self.check_events()
-            if not self.paused:
+            if self.game_started and not self.paused:
                 self.season_controller.update(self.delta_time)
                 self.camera.update()
             self.render()
             self.delta_time = self.clock.tick(60)
-            self.update_frame_stats()
-            self.update_adaptive_quality()
+            if self.game_started:
+                self.update_frame_stats()
+                self.update_adaptive_quality()

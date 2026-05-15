@@ -5,6 +5,7 @@ Project assets are grouped by type:
 - `audio/`: background music and audio notes.
 - `shaders/`: GLSL shader source files.
 - `textures/`: PNG textures loaded by `engine.rendering.texture.TextureManager`.
+- `ui/`: title screen and user-interface image assets.
 
 Seasonal ground textures:
 

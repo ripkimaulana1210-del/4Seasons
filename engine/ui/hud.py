@@ -1,11 +1,10 @@
-import math
-
 import pygame as pg
 import moderngl as mgl
 import numpy as np
 
 from ..core.paths import SHADER_DIR
 from ..systems.season_transition_manager import transition_effect_family
+from .main_menu import MainMenu
 
 
 class HUD:
@@ -19,6 +18,9 @@ class HUD:
         self.texture = None
         self.pause_texture = None
         self.startup_texture = None
+        self.startup_hover_token = None
+        self.startup_last_refresh = -999.0
+        self.main_menu = MainMenu(app)
 
         self.font = pg.font.Font(None, 19)
         self.small_font = pg.font.Font(None, 17)
@@ -233,7 +235,7 @@ class HUD:
         title = self.title_font.render("Paused", True, (250, 252, 255))
         surface.blit(title, (24, 16))
         lines = [
-            "Esc pause/resume | Q exit saat pause | Enter/Space skip intro",
+            "Esc pause/resume | Q exit saat pause",
             "W/A/S/D gerak | Q/E turun-naik | Mouse lihat | Shift cepat | Ctrl pelan",
             "Tab free/orbit | Mouse wheel zoom | ` mouse grab | C cinematic",
             "1-4 utama | 5-0 micro | Shift+1-0/[ ] pilih | N/P next-prev",
@@ -259,75 +261,17 @@ class HUD:
         self.pause_texture = self.ctx.texture(size, 4, data)
         self.pause_texture.filter = (mgl.LINEAR, mgl.LINEAR)
 
-    def update_startup_texture(self):
+    def invalidate_startup_texture(self):
+        if self.startup_texture is not None:
+            self.startup_texture.release()
+            self.startup_texture = None
+        self.startup_last_refresh = -999.0
+
+    def play_button_rect(self):
+        return self.main_menu.play_button_rect()
+
+    def upload_startup_texture(self, surface):
         width, height = self.app.WIN_SIZE
-        surface = pg.Surface((width, height), flags=pg.SRCALPHA)
-        surface.fill((5, 8, 13, 226))
-
-        season_specs = [
-            ("SPRING", (255, 128, 184)),
-            ("SUMMER", (255, 196, 58)),
-            ("AUTUMN", (224, 92, 34)),
-            ("WINTER", (150, 210, 255)),
-        ]
-        band_w = width / 4.0
-        for idx, (_name, color) in enumerate(season_specs):
-            left = int(idx * band_w)
-            rect = pg.Rect(left, 0, int(band_w) + 2, height)
-            pg.draw.rect(surface, (*color, 30), rect)
-            pg.draw.rect(surface, (*color, 72), (left, height - 8, int(band_w) + 2, 8))
-
-        center = (width // 2, height // 2)
-        min_dim = min(width, height)
-        ring_size = max(190, int(min_dim * 0.42))
-        ring_rect = pg.Rect(0, 0, ring_size, ring_size)
-        ring_rect.center = (center[0], center[1] - int(min_dim * 0.035))
-        arc_width = max(6, int(min_dim * 0.014))
-        for idx, (_name, color) in enumerate(season_specs):
-            start = -math.pi / 2.0 + idx * math.pi / 2.0
-            pg.draw.arc(surface, (*color, 220), ring_rect, start, start + math.pi / 2.0, arc_width)
-
-        glow_rect = ring_rect.inflate(int(min_dim * 0.10), int(min_dim * 0.10))
-        pg.draw.ellipse(surface, (255, 255, 255, 18), glow_rect, width=max(2, arc_width // 2))
-        pg.draw.ellipse(surface, (12, 18, 26, 132), ring_rect.inflate(-arc_width * 3, -arc_width * 3))
-
-        def fitted_font(text, start_size, max_width, min_size=22):
-            size = start_size
-            font = pg.font.Font(None, size)
-            while size > min_size and font.size(text)[0] > max_width:
-                size -= 3
-                font = pg.font.Font(None, size)
-            return font
-
-        def blit_centered(text, font, y, color, shadow=(0, 0, 0, 130)):
-            text_surface = font.render(text, True, color)
-            shadow_surface = font.render(text, True, shadow)
-            rect = text_surface.get_rect(center=(center[0], y))
-            for offset in ((2, 2), (-1, 2), (2, -1)):
-                surface.blit(shadow_surface, rect.move(offset))
-            surface.blit(text_surface, rect)
-            return rect
-
-        title_font = fitted_font("4 SEASONS", int(min_dim * 0.155), int(width * 0.78), min_size=44)
-        subtitle_font = fitted_font("SAKURA SEASONAL SCENE", int(min_dim * 0.038), int(width * 0.72), min_size=18)
-        title_y = center[1] - int(min_dim * 0.065)
-        blit_centered("4 SEASONS", title_font, title_y, (250, 253, 255))
-        blit_centered("SAKURA SEASONAL SCENE", subtitle_font, title_y + int(min_dim * 0.082), (208, 224, 232), shadow=(0, 0, 0, 100))
-
-        chip_font = fitted_font("SPRING", int(min_dim * 0.030), max(92, int(width * 0.13)), min_size=15)
-        chip_y = min(height - 54, center[1] + int(min_dim * 0.205))
-        chip_gap = max(8, int(width * 0.012))
-        chip_w = min(138, max(86, int((width - chip_gap * 5) / 4.8)))
-        chip_h = max(28, int(min_dim * 0.044))
-        total_w = chip_w * 4 + chip_gap * 3
-        start_x = center[0] - total_w // 2
-        for idx, (name, color) in enumerate(season_specs):
-            rect = pg.Rect(start_x + idx * (chip_w + chip_gap), chip_y, chip_w, chip_h)
-            pg.draw.rect(surface, (*color, 72), rect, border_radius=6)
-            pg.draw.rect(surface, (*color, 185), rect, width=1, border_radius=6)
-            text = chip_font.render(name, True, (246, 250, 252))
-            surface.blit(text, text.get_rect(center=rect.center))
-
         flipped = pg.transform.flip(surface, False, True)
         data = pg.image.tostring(flipped, "RGBA")
         if self.startup_texture is not None:
@@ -335,15 +279,26 @@ class HUD:
         self.startup_texture = self.ctx.texture((width, height), 4, data)
         self.startup_texture.filter = (mgl.LINEAR, mgl.LINEAR)
 
-    def render(self):
-        if self.app.time - self.last_refresh >= self.refresh_interval or self.texture is None:
+    def handle_menu_input(self, event):
+        return self.main_menu.handle_menu_input(event)
+
+    def update_startup_texture(self):
+        delta_s = self.app.delta_time * 0.001 if self.app.delta_time > 0 else 1.0 / 60.0
+        surface = self.main_menu.render_surface(delta_s)
+        self.startup_hover_token = self.main_menu.hover_token()
+        self.startup_last_refresh = self.app.time
+        self.upload_startup_texture(surface)
+
+    def render(self, show_panel=True):
+        if show_panel and (self.app.time - self.last_refresh >= self.refresh_interval or self.texture is None):
             self.update_texture()
             self.last_refresh = self.app.time
 
         self.ctx.disable(mgl.DEPTH_TEST)
         self.program["u_alpha"].value = 1.0
-        self.texture.use(location=0)
-        self.vao.render()
+        if show_panel and self.texture is not None:
+            self.texture.use(location=0)
+            self.vao.render()
         if self.app.paused:
             if self.pause_texture is None:
                 self.update_pause_texture()
@@ -351,7 +306,9 @@ class HUD:
             self.pause_vao.render()
         startup_alpha = self.app.startup_overlay_alpha()
         if startup_alpha > 0.0:
-            if self.startup_texture is None:
+            hover_token = self.main_menu.hover_token()
+            needs_refresh = self.app.time - self.startup_last_refresh >= 1.0 / 30.0
+            if self.startup_texture is None or hover_token != self.startup_hover_token or needs_refresh:
                 self.update_startup_texture()
             self.program["u_alpha"].value = max(0.0, min(1.0, startup_alpha))
             self.startup_texture.use(location=0)
@@ -370,6 +327,8 @@ class HUD:
         if self.startup_texture is not None:
             self.startup_texture.release()
             self.startup_texture = None
+        self.startup_last_refresh = -999.0
+        self.main_menu.resize()
 
     def destroy(self):
         if self.texture is not None:
