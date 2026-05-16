@@ -4,16 +4,22 @@ from .paths import SETTINGS_PATH
 
 
 DEFAULT_SETTINGS = {
-    "quality": "high",
+    "quality": "medium",
     "postprocess": True,
     "shadow": True,
     "profile_visible": True,
     "hud_visible": True,
     "audio_muted": False,
-    "fullscreen": False,
-    "windowed_size": [1280, 720],
+    "master_volume": 1.0,
+    "music_volume": 1.0,
+    "sfx_volume": 1.0,
+    "ambience_volume": 1.0,
+    "ui_volume": 1.0,
+    "fullscreen": True,
+    "windowed_size": None,
     "camera_preset": "free",
-    "adaptive_quality": True,
+    "quality_mode": "manual",
+    "adaptive_quality": False,
 }
 
 

@@ -196,11 +196,12 @@ class MainMenu:
         card_h = int(clamp(min(height * 0.205, card_w * 0.52), 108, 164))
         card_y = int(clamp(height * 0.445, 220, height - card_h - 174))
         card_x = (width - (card_w * 4 + card_gap * 3)) // 2
-        play_size = int(clamp(height * 0.108, 64, 86))
-        play_center = (width // 2, int(clamp(height * 0.790, card_y + card_h + 74, height - 82)))
-        settings_w = int(clamp(width * 0.118, 118, 158))
-        settings_h = int(clamp(height * 0.052, 36, 46))
-        settings = pg.Rect(width - settings_w - 26, 24, settings_w, settings_h)
+        action_w = int(clamp(width * 0.18, 190, 270))
+        action_h = int(clamp(height * 0.052, 42, 54))
+        action_gap = int(clamp(height * 0.014, 10, 16))
+        action_total_h = action_h * 3 + action_gap * 2
+        action_y = int(card_y + card_h + clamp(height * 0.048, 30, 48))
+        action_y = int(clamp(action_y, card_y + card_h + 22, height - action_total_h - 58))
         return {
             "width": width,
             "height": height,
@@ -211,17 +212,26 @@ class MainMenu:
             "card_gap": card_gap,
             "card_x": card_x,
             "card_y": card_y,
-            "play_size": play_size,
-            "play_center": play_center,
-            "settings": settings,
+            "action_w": action_w,
+            "action_h": action_h,
+            "action_gap": action_gap,
+            "action_y": action_y,
+        }
+
+    def main_action_rects(self):
+        layout = self.layout()
+        x = (layout["width"] - layout["action_w"]) // 2
+        y = layout["action_y"]
+        gap = layout["action_gap"]
+        h = layout["action_h"]
+        return {
+            "play": pg.Rect(x, y, layout["action_w"], h),
+            "settings": pg.Rect(x, y + h + gap, layout["action_w"], h),
+            "exit": pg.Rect(x, y + (h + gap) * 2, layout["action_w"], h),
         }
 
     def play_button_rect(self):
-        layout = self.layout()
-        radius = layout["play_size"] // 2
-        rect = pg.Rect(0, 0, radius * 3, radius * 3 + 34)
-        rect.center = (layout["play_center"][0], layout["play_center"][1] + 16)
-        return rect
+        return self.main_action_rects()["play"]
 
     def season_card_rects(self):
         layout = self.layout()
@@ -232,7 +242,10 @@ class MainMenu:
         return rects
 
     def settings_button_rect(self):
-        return self.layout()["settings"]
+        return self.main_action_rects()["settings"]
+
+    def exit_button_rect(self):
+        return self.main_action_rects()["exit"]
 
     def hover_token(self):
         mouse = pg.mouse.get_pos()
@@ -244,6 +257,7 @@ class MainMenu:
         return (
             self.play_button_rect().collidepoint(mouse),
             self.settings_button_rect().collidepoint(mouse),
+            self.exit_button_rect().collidepoint(mouse),
             card,
             self.selected_season_id,
             bool(self.notice_timer > 0.0),
@@ -255,9 +269,9 @@ class MainMenu:
             if self.play_button_rect().collidepoint(position):
                 return {"action": "play", "season_id": self.selected_season_id}
             if self.settings_button_rect().collidepoint(position):
-                self.notice = "Settings tersedia di dalam game: F9-F12"
-                self.notice_timer = 2.4
                 return {"action": "settings"}
+            if self.exit_button_rect().collidepoint(position):
+                return {"action": "exit"}
             for season_id, rect in self.season_card_rects().items():
                 if rect.collidepoint(position):
                     self.selected_season_id = season_id
@@ -416,38 +430,64 @@ class MainMenu:
             self.draw_icon(surface, spec["icon"], icon_center, color, int(clamp(rect.height * 0.16, 20, 30)))
             surface.blit(label, label.get_rect(midleft=(rect.x + 52, icon_center[1])))
 
-    def draw_play_button(self, surface):
-        layout = self.layout()
+    def draw_main_action_button(self, surface, rect, label, accent, hovered=False):
+        radius = min(12, rect.height // 3)
+        shadow = pg.Surface((rect.width + 14, rect.height + 14), pg.SRCALPHA)
+        shadow_alpha = 96 if hovered else 68
+        pg.draw.rect(shadow, (0, 0, 0, shadow_alpha), shadow.get_rect().inflate(-8, -8), border_radius=radius + 4)
+        surface.blit(shadow, (rect.x - 7, rect.y - 4))
+
+        fill = (32, 45, 60, 255) if hovered else (15, 25, 36, 248)
+        border = rgba(accent, 255 if hovered else 210)
+        inner = (255, 255, 255, 28 if hovered else 16)
+        pg.draw.rect(surface, fill, rect, border_radius=radius)
+        pg.draw.rect(surface, border, rect, width=2 if hovered else 1, border_radius=radius)
+        pg.draw.rect(surface, inner, rect.inflate(-6, -6), width=1, border_radius=max(4, radius - 3))
+
+        icon_x = rect.x + int(rect.height * 0.72)
+        icon_y = rect.centery
+        if label == "PLAY":
+            tri = max(10, int(rect.height * 0.34))
+            points = [
+                (icon_x - tri // 3, icon_y - tri // 2),
+                (icon_x - tri // 3, icon_y + tri // 2),
+                (icon_x + tri // 2, icon_y),
+            ]
+            pg.draw.polygon(surface, rgba(accent, 245), points)
+        elif label == "SETTINGS":
+            pg.draw.circle(surface, rgba(accent, 235), (icon_x, icon_y), 8, width=2)
+            for angle in range(0, 360, 60):
+                dx = math.cos(math.radians(angle)) * 12
+                dy = math.sin(math.radians(angle)) * 12
+                pg.draw.aaline(surface, rgba(accent, 210), (icon_x, icon_y), (icon_x + dx, icon_y + dy))
+        elif label == "EXIT":
+            arrow = max(12, int(rect.height * 0.32))
+            pg.draw.line(surface, rgba(accent, 235), (icon_x - arrow // 2, icon_y), (icon_x + arrow // 2, icon_y), width=3)
+            pg.draw.polygon(
+                surface,
+                rgba(accent, 235),
+                [(icon_x + arrow // 2, icon_y), (icon_x + 1, icon_y - 6), (icon_x + 1, icon_y + 6)],
+            )
+
+        font = font_from(("segoeuisemibold", "arial", "calibri"), int(clamp(rect.height * 0.40, 17, 22)), bold=True)
+        text = font.render(label, True, (248, 252, 255))
+        text_rect = text.get_rect(center=rect.center)
+        shadow_text = font.render(label, True, (0, 0, 0))
+        surface.blit(shadow_text, text_rect.move(1, 2))
+        surface.blit(text, text_rect)
+
+    def draw_main_actions(self, surface):
+        rects = self.main_action_rects()
         mouse = pg.mouse.get_pos()
-        center = layout["play_center"]
-        radius = layout["play_size"] // 2
-        self.hovered_play = self.play_button_rect().collidepoint(mouse)
-        pulse = 0.5 + 0.5 * math.sin(self.app.time * 3.4)
-        hover_scale = 1.08 if self.hovered_play else 1.0
-        draw_radius = int(radius * hover_scale)
-
-        glow = pg.Surface((draw_radius * 5, draw_radius * 5), pg.SRCALPHA)
-        glow_center = (glow.get_width() // 2, glow.get_height() // 2)
-        for index, alpha in enumerate((8, 14, 20)):
-            r = draw_radius + 24 - index * 8
-            pg.draw.circle(glow, (255, 126, 184, alpha + int(pulse * 4)), glow_center, r)
-        surface.blit(glow, (center[0] - glow_center[0], center[1] - glow_center[1]))
-
-        fill = (255, 246, 252, 246) if self.hovered_play else (255, 236, 247, 228)
-        pg.draw.circle(surface, (0, 0, 0, 118), (center[0], center[1] + 7), draw_radius)
-        pg.draw.circle(surface, fill, center, draw_radius)
-        pg.draw.circle(surface, (255, 157, 202, 238), center, draw_radius, width=2)
-
-        tri = int(draw_radius * 0.52)
-        points = [
-            (center[0] - tri // 3, center[1] - tri // 2),
-            (center[0] - tri // 3, center[1] + tri // 2),
-            (center[0] + tri // 2, center[1]),
-        ]
-        pg.draw.polygon(surface, (38, 20, 34), points)
-
-        font = font_from(("segoeuisemibold", "arial", "calibri"), int(clamp(layout["height"] * 0.034, 22, 34)), bold=True)
-        self.draw_text(surface, "PLAY", font, (center[0], center[1] + draw_radius + 28), (255, 250, 253), shadow=(0, 0, 0, 170))
+        self.hovered_play = rects["play"].collidepoint(mouse)
+        self.hovered_settings = rects["settings"].collidepoint(mouse)
+        actions = (
+            ("play", "PLAY", (255, 150, 204), self.hovered_play),
+            ("settings", "SETTINGS", (126, 205, 255), self.hovered_settings),
+            ("exit", "EXIT", (255, 124, 138), rects["exit"].collidepoint(mouse)),
+        )
+        for key, label, accent, hovered in actions:
+            self.draw_main_action_button(surface, rects[key], label, accent, hovered)
 
     def draw_settings_button(self, surface):
         rect = self.settings_button_rect()
@@ -482,7 +522,6 @@ class MainMenu:
         self.draw_background(surface)
         self.draw_title(surface)
         self.draw_season_cards(surface)
-        self.draw_play_button(surface)
-        self.draw_settings_button(surface)
+        self.draw_main_actions(surface)
         self.draw_footer(surface)
         return surface

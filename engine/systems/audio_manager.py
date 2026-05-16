@@ -24,12 +24,23 @@ SEASON_THEME_PATHS = {
 }
 
 
+def clamp(value, lower=0.0, upper=1.0):
+    return max(lower, min(upper, float(value)))
+
+
 class AudioManager:
-    def __init__(self, muted=False):
+    def __init__(self, muted=False, master_volume=1.0, music_volume=1.0, sfx_volume=1.0, ambience_volume=1.0, ui_volume=1.0):
         self.enabled = False
         self.muted = muted
+        self.master_volume = clamp(master_volume)
+        self.music_volume = clamp(music_volume)
+        self.sfx_volume = clamp(sfx_volume)
+        self.ambience_volume = clamp(ambience_volume)
+        self.ui_volume = clamp(ui_volume)
         self.current_path = None
         self.current_ambience = None
+        self.current_music_base_volume = DEFAULT_THEME_VOLUME
+        self.current_ambience_base_volume = 0.16
         self.ambience_channel = None
         self.cue_channel = None
         self.ambience_sounds = {}
@@ -71,6 +82,50 @@ class AudioManager:
             if path is not None and path.exists():
                 return path, volume
         return None, DEFAULT_THEME_VOLUME
+
+    def final_music_volume(self, base_volume=None):
+        base = self.current_music_base_volume if base_volume is None else float(base_volume)
+        return clamp(base * self.master_volume * self.music_volume)
+
+    def final_sfx_volume(self, base_volume=1.0):
+        return clamp(float(base_volume) * self.master_volume * self.sfx_volume)
+
+    def final_ambience_volume(self, base_volume=None):
+        base = self.current_ambience_base_volume if base_volume is None else float(base_volume)
+        return clamp(base * self.master_volume * self.ambience_volume)
+
+    def set_volume(self, channel, value):
+        value = clamp(value)
+        if channel == "master":
+            self.master_volume = value
+        elif channel == "music":
+            self.music_volume = value
+        elif channel == "sfx":
+            self.sfx_volume = value
+        elif channel == "ambience":
+            self.ambience_volume = value
+        elif channel == "ui":
+            self.ui_volume = value
+        self.apply_current_volumes()
+
+    def volume_state(self):
+        return {
+            "master": self.master_volume,
+            "music": self.music_volume,
+            "sfx": self.sfx_volume,
+            "ambience": self.ambience_volume,
+            "ui": self.ui_volume,
+        }
+
+    def apply_current_volumes(self):
+        if not self.enabled or self.muted:
+            return
+        if pg.mixer.get_init() and pg.mixer.music.get_busy():
+            pg.mixer.music.set_volume(self.final_music_volume())
+        if self.ambience_channel is not None and self.ambience_channel.get_busy():
+            self.ambience_channel.set_volume(self.final_ambience_volume())
+        if self.cue_channel is not None:
+            self.cue_channel.set_volume(self.final_sfx_volume(0.36))
 
     def generate_ambience(self, kind):
         mixer = pg.mixer.get_init()
@@ -195,7 +250,7 @@ class AudioManager:
             self.transition_cues[cue_key] = sound
 
         self.cue_channel.play(sound)
-        self.cue_channel.set_volume(0.36)
+        self.cue_channel.set_volume(self.final_sfx_volume(0.36))
         return True
 
     def start_ambience(self, season):
@@ -204,8 +259,9 @@ class AudioManager:
 
         kind = season.get("ambience_type", season.get("id", "spring"))
         volume = float(season.get("ambience_volume", 0.16))
+        self.current_ambience_base_volume = volume
         if self.current_ambience == kind and self.ambience_channel.get_busy():
-            self.ambience_channel.set_volume(volume)
+            self.ambience_channel.set_volume(self.final_ambience_volume(volume))
             return True
 
         sound = self.ambience_sounds.get(kind)
@@ -216,7 +272,7 @@ class AudioManager:
             self.ambience_sounds[kind] = sound
 
         self.ambience_channel.play(sound, loops=-1, fade_ms=900)
-        self.ambience_channel.set_volume(volume)
+        self.ambience_channel.set_volume(self.final_ambience_volume(volume))
         self.current_ambience = kind
         return True
 
@@ -231,20 +287,21 @@ class AudioManager:
 
         self.stop_ambience(fade_ms=300)
         music_path, music_volume = self.music_choice(season)
+        self.current_music_base_volume = music_volume
         if music_path is None:
             self.stop_music()
             self.status = "Tidak ada musik"
             return
 
         if self.current_path == music_path and pg.mixer.music.get_busy():
-            pg.mixer.music.set_volume(music_volume)
+            pg.mixer.music.set_volume(self.final_music_volume(music_volume))
             self.status = f"Play: {music_path.name}"
             return
 
         try:
             pg.mixer.music.fadeout(500)
             pg.mixer.music.load(str(music_path))
-            pg.mixer.music.set_volume(music_volume)
+            pg.mixer.music.set_volume(self.final_music_volume(music_volume))
             pg.mixer.music.play(loops=-1, fade_ms=1200)
             self.current_path = music_path
             self.status = f"Play: {music_path.name}"
