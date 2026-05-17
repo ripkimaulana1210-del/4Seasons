@@ -18,6 +18,7 @@ class SceneSeasonalObjectBaseMixin:
         elif effect == "winter":
             self.add_winter_props(app)
 
+
     def add_picnic_set(self, app):
         add = self.add_object
         add(ColorPlane(app, pos=(-6.3, 0.034, 6.8), rot=(0, 22, 0), scale=(0.72, 1, 0.44), color=(0.88, 0.24, 0.28)))
@@ -84,6 +85,34 @@ class SceneSeasonalObjectBaseMixin:
         self.add_winter_footprints_and_drifts(app)
         self.add_winter_onsen_corner(app)
         self.add_winter_frozen_waterfall_detail(app)
+        
+        # 3 Manusia salju disebar merata mengelilingi desa (jarak sama rata 120 derajat) di area kosong
+        snowman_count = 3
+        snowman_radius = 14.5
+        angle_offset = 73.0
+        for i in range(snowman_count):
+            angle_deg = angle_offset + i * (360.0 / snowman_count)
+            angle_rad = math.radians(angle_deg)
+            pos_x = snowman_radius * math.cos(angle_rad)
+            pos_z = snowman_radius * math.sin(angle_rad)
+            yaw = math.degrees(math.atan2(-pos_x, -pos_z))
+            self.add_winter_snowman(app, pos_x=pos_x, pos_z=pos_z, yaw=yaw)
+        
+        # 9 Igloo disebar dengan jarak merata (perfect ring) di area padang salju mengelilingi desa
+        igloo_count = 9
+        ring_radius = 26.5
+        for i in range(igloo_count):
+            angle_deg = i * (360.0 / igloo_count)
+            angle_rad = math.radians(angle_deg)
+            
+            # Posisi melingkar
+            pos_x = ring_radius * math.cos(angle_rad)
+            pos_z = ring_radius * math.sin(angle_rad)
+            
+            # Pintu masuk menghadap persis ke pusat desa (origin 0,0)
+            yaw = math.degrees(math.atan2(-pos_x, -pos_z))
+            
+            self.add_winter_igloo(app, pos_x=pos_x, pos_z=pos_z, yaw=yaw)
 
     def add_house_seasonal_accents(self, app, effect):
         add = self.add_object

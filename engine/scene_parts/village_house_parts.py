@@ -49,55 +49,200 @@ class SceneVillageHousePartsMixin:
 
         add = self.add_object
         snow = self.season_color("winter_snow_color", (0.94, 0.97, 1.00))
-        shadow = self.season_color("winter_snow_shadow_color", (0.78, 0.86, 0.92))
-        slope_angle = math.degrees(math.atan2(roof_height, width * 1.14 + 1e-6))
+        
+        overhang_x = 1.14
+        overhang_z = 1.18
+        
+    def add_snow_roof_cap(self, app, base_x, base_z, yaw, width, height, depth, roof_base_y, roof_height, transition_mode=None):
+        if not self.is_winter() and not transition_mode:
+            return
 
-        for side in (-1, 1):
-            cap_x, cap_z = self.local_house_pos(
-                base_x,
-                base_z,
-                yaw,
-                side * width * 0.33,
-                0.0,
-            )
-            add(
-                ColorCube(
-                    app,
-                    pos=(cap_x, roof_base_y + roof_height * 0.54, cap_z),
-                    rot=(0, yaw, -side * slope_angle),
-                    scale=(width * 0.50, height * 0.045, depth * 1.26),
-                    color=snow,
-                )
-            )
+        if not transition_mode:
+            transition = app.season_controller.transition_snapshot()
+            if transition is not None and transition["pair"] in ("autumn->winter", "winter->spring"):
+                # Do not add the static snow roof if we are in the middle of animating it
+                return
 
-            lip_x, lip_z = self.local_house_pos(
-                base_x,
-                base_z,
-                yaw,
-                side * width * 0.63,
-                0.0,
-            )
+        add = self.add_object
+        snow = self.season_color("winter_snow_color", (0.94, 0.97, 1.00))
+        from ..models import TexturedGableRoof, PondRock, TransitionGableRoof, TransitionPondRock
+        
+        overhang_x = 1.14
+        overhang_z = 1.18
+        
+        # 1. Selimut Salju Utama (Smooth Blanket)
+        # Menggunakan bentuk atap yang Anda sukai, namun dipakaikan tekstur "cloud_soft"
+        # agar permukaannya terlihat seperti salju empuk (tidak ber-noise/kasar seperti tekstur salju biasa)
+        roof_pos = (base_x, roof_base_y + 0.04, base_z)
+        roof_scale = (width * overhang_x + 0.04, roof_height + 0.04, depth * overhang_z + 0.04)
+        
+        if transition_mode == "fade_in":
             add(
-                ColorCube(
+                TransitionGableRoof(
                     app,
-                    pos=(lip_x, roof_base_y + roof_height * 0.08, lip_z),
-                    rot=(0, yaw, -side * slope_angle),
-                    scale=(width * 0.12, height * 0.060, depth * 1.30),
-                    color=shadow,
-                )
-            )
-
-        for local_z in (-depth * 1.20, depth * 1.20):
-            eave_x, eave_z = self.local_house_pos(base_x, base_z, yaw, 0.0, local_z)
-            add(
-                ColorCube(
-                    app,
-                    pos=(eave_x, roof_base_y + height * 0.05, eave_z),
+                    pos=roof_pos,
                     rot=(0, yaw, 0),
-                    scale=(width * 0.92, height * 0.050, depth * 0.055),
-                    color=snow,
+                    scale=(roof_scale[0], 0.001, roof_scale[2]),
+                    end_scale=roof_scale,
+                    texture_name="cloud_soft",
+                    tint=(0.86, 0.98, 1.00),
+                    end_tint=snow,
+                    progress_start=0.3,
+                    progress_end=0.8,
+                    repeat=(1.5, 1.5)
                 )
             )
+        elif transition_mode == "fade_out":
+            add(
+                TransitionGableRoof(
+                    app,
+                    pos=roof_pos,
+                    rot=(0, yaw, 0),
+                    scale=roof_scale,
+                    end_scale=(roof_scale[0], 0.001, roof_scale[2]),
+                    texture_name="cloud_soft",
+                    tint=snow,
+                    end_tint=(0.36, 0.66, 0.76),
+                    progress_start=0.3,
+                    progress_end=0.8,
+                    repeat=(1.5, 1.5)
+                )
+            )
+        else:
+            add(
+                TexturedGableRoof(
+                    app,
+                    pos=roof_pos,
+                    rot=(0, yaw, 0),
+                    scale=roof_scale,
+                    texture_name="cloud_soft",
+                    tint=snow,
+                    repeat=(1.5, 1.5)
+                )
+            )
+        
+        # 2. Ketebalan Salju di Ujung Atap (Eaves / Overhang)
+        # Menambahkan juntaian tebal di ujung atap agar tidak terlihat seperti dicat putih
+        hw = width * overhang_x * 0.5
+        hd = depth * overhang_z * 0.5
+        
+        # Sepanjang sisi kiri dan kanan (Eaves)
+        for side in (-1, 1):
+            eaves_z_steps = max(2, int(depth * 5))
+            for zi in range(eaves_z_steps):
+                t_z = (zi / (eaves_z_steps - 1)) * 2.0 - 1.0 if eaves_z_steps > 1 else 0.0
+                local_z = t_z * hd
+                
+                local_x = side * hw
+                size_var = 0.8 + 0.4 * math.sin(zi * 45.6)
+                
+                sx = width * 0.15 * size_var
+                sy = height * 0.12 * size_var
+                sz = depth * 0.35 * size_var
+                
+                pos_x, pos_z = self.local_house_pos(base_x, base_z, yaw, local_x, local_z)
+                rock_pos = (pos_x, roof_base_y + 0.02 - sy * 0.2, pos_z)
+                rock_scale = (sx, sy, sz)
+                
+                if transition_mode == "fade_in":
+                    add(
+                        TransitionPondRock(
+                            app,
+                            pos=rock_pos,
+                            rot=(0, yaw, 0),
+                            scale=(0.001, 0.001, 0.001),
+                            end_scale=rock_scale,
+                            color=(0.86, 0.98, 1.00),
+                            end_color=snow,
+                            progress_start=0.4 + (zi % 3) * 0.1,
+                            progress_end=0.9
+                        )
+                    )
+                elif transition_mode == "fade_out":
+                    add(
+                        TransitionPondRock(
+                            app,
+                            pos=rock_pos,
+                            rot=(0, yaw, 0),
+                            scale=rock_scale,
+                            end_scale=(0.001, 0.001, 0.001),
+                            color=snow,
+                            end_color=(0.36, 0.66, 0.76),
+                            progress_start=0.3 + (zi % 3) * 0.1,
+                            progress_end=0.7
+                        )
+                    )
+                else:
+                    add(
+                        PondRock(
+                            app,
+                            pos=rock_pos,
+                            rot=(0, yaw, 0),
+                            scale=rock_scale,
+                            color=snow
+                        )
+                    )
+
+        # Sepanjang sisi depan dan belakang (Gable Ends)
+        x_steps = max(4, int(width * 8))
+        slope_angle = math.degrees(math.atan2(roof_height, hw))
+        for end_z in (-1, 1):
+            for xi in range(x_steps):
+                t_x = (xi / (x_steps - 1)) * 2.0 - 1.0 if x_steps > 1 else 0.0
+                local_x = t_x * hw
+                local_z = end_z * hd
+                
+                surface_y = roof_base_y + roof_height * (1.0 - abs(t_x))
+                size_var = 0.8 + 0.4 * math.sin(xi * 33.3)
+                
+                sx = width * 0.35 * size_var
+                sy = height * 0.10 * size_var
+                sz = depth * 0.15 * size_var
+                
+                pos_x, pos_z = self.local_house_pos(base_x, base_z, yaw, local_x, local_z)
+                side_rot = -1 if local_x < 0 else 1
+                rock_pos = (pos_x, surface_y + 0.04, pos_z)
+                rock_rot = (0, yaw, -side_rot * slope_angle)
+                rock_scale = (sx, sy, sz)
+                
+                if transition_mode == "fade_in":
+                    add(
+                        TransitionPondRock(
+                            app,
+                            pos=rock_pos,
+                            rot=rock_rot,
+                            scale=(0.001, 0.001, 0.001),
+                            end_scale=rock_scale,
+                            color=(0.86, 0.98, 1.00),
+                            end_color=snow,
+                            progress_start=0.4 + (xi % 3) * 0.1,
+                            progress_end=0.9
+                        )
+                    )
+                elif transition_mode == "fade_out":
+                    add(
+                        TransitionPondRock(
+                            app,
+                            pos=rock_pos,
+                            rot=rock_rot,
+                            scale=rock_scale,
+                            end_scale=(0.001, 0.001, 0.001),
+                            color=snow,
+                            end_color=(0.36, 0.66, 0.76),
+                            progress_start=0.3 + (xi % 3) * 0.1,
+                            progress_end=0.7
+                        )
+                    )
+                else:
+                    add(
+                        PondRock(
+                            app,
+                            pos=rock_pos,
+                            rot=rock_rot,
+                            scale=rock_scale,
+                            color=snow
+                        )
+                    )
 
     def add_house_volume(
         self,
@@ -157,6 +302,19 @@ class SceneVillageHousePartsMixin:
                 repeat=(1.2, 1.4),
             )
         )
+        if not hasattr(self, "_cached_snow_roofs"):
+            self._cached_snow_roofs = []
+        self._cached_snow_roofs.append({
+            "base_x": x,
+            "base_z": z,
+            "yaw": roof_yaw,
+            "width": width,
+            "height": body_half_height,
+            "depth": depth,
+            "roof_base_y": roof_base_y,
+            "roof_height": roof_height,
+        })
+        
         self.add_snow_roof_cap(
             app,
             x,

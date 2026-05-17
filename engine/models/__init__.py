@@ -37,6 +37,8 @@ from .atmosphere import (
 from .transition_effects import (
     TransitionCube,
     TransitionDisc,
+    TransitionGableRoof,
+    TransitionPondRock,
     RainDrop,
     DriftParticle,
     WindStreak,
@@ -91,6 +93,8 @@ __all__ = [
     "SkyDome",
     "TransitionCube",
     "TransitionDisc",
+    "TransitionGableRoof",
+    "TransitionPondRock",
     "RainDrop",
     "DriftParticle",
     "WindStreak",

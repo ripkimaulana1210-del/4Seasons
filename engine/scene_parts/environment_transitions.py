@@ -461,11 +461,89 @@ class SceneTransitionEffectsMixin:
                 )
             )
 
+        # Transisi kemunculan Igloo: Igloo perlahan dibangun dari bawah ke atas
+        igloo_count = 9
+        ring_radius = 26.5
+        for i in range(igloo_count):
+            angle_deg = i * (360.0 / igloo_count)
+            angle_rad = math.radians(angle_deg)
+            pos_x = ring_radius * math.cos(angle_rad)
+            pos_z = ring_radius * math.sin(angle_rad)
+            yaw = math.degrees(math.atan2(-pos_x, -pos_z))
+            self.add_winter_igloo(app, pos_x=pos_x, pos_z=pos_z, yaw=yaw, transition_mode="fade_in")
+            
+        # Transisi kemunculan Manusia Salju
+        snowman_count = 3
+        snowman_radius = 14.5
+        angle_offset = 73.0
+        for i in range(snowman_count):
+            angle_deg = angle_offset + i * (360.0 / snowman_count)
+            angle_rad = math.radians(angle_deg)
+            pos_x = snowman_radius * math.cos(angle_rad)
+            pos_z = snowman_radius * math.sin(angle_rad)
+            yaw = math.degrees(math.atan2(-pos_x, -pos_z))
+            self.add_winter_snowman(app, pos_x=pos_x, pos_z=pos_z, yaw=yaw, transition_mode="fade_in")
+
+        # Transisi salju di atap rumah
+        if hasattr(self, "_cached_snow_roofs"):
+            for roof in self._cached_snow_roofs:
+                self.add_snow_roof_cap(
+                    app,
+                    base_x=roof["base_x"],
+                    base_z=roof["base_z"],
+                    yaw=roof["yaw"],
+                    width=roof["width"],
+                    height=roof["height"],
+                    depth=roof["depth"],
+                    roof_base_y=roof["roof_base_y"],
+                    roof_height=roof["roof_height"],
+                    transition_mode="fade_in",
+                )
+
     def add_winter_to_spring_thaw(self, app, transition):
         add = self.add_object
         snow = (0.94, 0.97, 1.00)
         puddle = (0.30, 0.58, 0.66)
         sprout = (0.38, 0.74, 0.28)
+        
+        # Transisi menghilangnya Igloo: Igloo meleleh/runtuh dari atas ke bawah
+        igloo_count = 9
+        ring_radius = 26.5
+        for i in range(igloo_count):
+            angle_deg = i * (360.0 / igloo_count)
+            angle_rad = math.radians(angle_deg)
+            pos_x = ring_radius * math.cos(angle_rad)
+            pos_z = ring_radius * math.sin(angle_rad)
+            yaw = math.degrees(math.atan2(-pos_x, -pos_z))
+            self.add_winter_igloo(app, pos_x=pos_x, pos_z=pos_z, yaw=yaw, transition_mode="fade_out")
+            
+        # Transisi mencairnya Manusia Salju
+        snowman_count = 3
+        snowman_radius = 14.5
+        angle_offset = 73.0
+        for i in range(snowman_count):
+            angle_deg = angle_offset + i * (360.0 / snowman_count)
+            angle_rad = math.radians(angle_deg)
+            pos_x = snowman_radius * math.cos(angle_rad)
+            pos_z = snowman_radius * math.sin(angle_rad)
+            yaw = math.degrees(math.atan2(-pos_x, -pos_z))
+            self.add_winter_snowman(app, pos_x=pos_x, pos_z=pos_z, yaw=yaw, transition_mode="fade_out")
+
+        # Transisi melelehnya salju di atap rumah
+        if hasattr(self, "_cached_snow_roofs"):
+            for roof in self._cached_snow_roofs:
+                self.add_snow_roof_cap(
+                    app,
+                    base_x=roof["base_x"],
+                    base_z=roof["base_z"],
+                    yaw=roof["yaw"],
+                    width=roof["width"],
+                    height=roof["height"],
+                    depth=roof["depth"],
+                    roof_base_y=roof["roof_base_y"],
+                    roof_height=roof["roof_height"],
+                    transition_mode="fade_out",
+                )
 
         # Ice crack then melt: bright cracks flash across pond and icy road, then fade.
         for i in range(24):

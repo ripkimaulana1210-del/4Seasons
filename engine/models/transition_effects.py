@@ -4,7 +4,8 @@ from pyglm import glm
 
 from .atmosphere import SunDisc
 from .core import _lerp_vec3, _transition_local_progress
-from .primitives import ColorCube
+from .environment_objects import PondRock
+from .primitives import ColorCube, TexturedGableRoof
 
 
 class TransitionCube(ColorCube):
@@ -131,6 +132,100 @@ class TransitionDisc(SunDisc):
         self.pos = _lerp_vec3(self.start_pos, self.end_pos, total)
         self.scale = _lerp_vec3(self.start_scale, self.end_scale, total) * pulse
         self.color = _lerp_vec3(self.start_color, self.end_color, total)
+        self.m_model = self.get_model_matrix()
+        super().update()
+
+
+class TransitionPondRock(PondRock):
+    def __init__(
+        self,
+        app,
+        pos=(0, 0, 0),
+        end_pos=None,
+        rot=(0, 0, 0),
+        scale=(1, 1, 1),
+        end_scale=None,
+        color=(1.0, 1.0, 1.0),
+        end_color=None,
+        progress_start=0.0,
+        progress_end=1.0,
+        pulse=0.0,
+        use_eased=True,
+    ):
+        self.start_pos = glm.vec3(pos)
+        self.end_pos = glm.vec3(end_pos if end_pos is not None else pos)
+        self.start_scale = glm.vec3(scale)
+        self.end_scale = glm.vec3(end_scale if end_scale is not None else scale)
+        self.start_color = glm.vec3(color)
+        self.end_color = glm.vec3(end_color if end_color is not None else color)
+        self.progress_start = progress_start
+        self.progress_end = progress_end
+        self.pulse = pulse
+        self.use_eased = use_eased
+        super().__init__(app, pos=pos, rot=rot, scale=scale, color=color)
+
+    def update(self):
+        progress = _transition_local_progress(
+            self.app,
+            self.progress_start,
+            self.progress_end,
+            self.use_eased,
+        )
+        pulse = 1.0
+        if self.pulse:
+            pulse += math.sin(self.app.time * math.tau * 1.7 + self.start_pos.x * 0.37 + self.start_pos.z * 0.23 + self.progress_start * 5.0) * self.pulse
+
+        self.pos = _lerp_vec3(self.start_pos, self.end_pos, progress)
+        self.scale = _lerp_vec3(self.start_scale, self.end_scale, progress) * pulse
+        self.color = _lerp_vec3(self.start_color, self.end_color, progress)
+        self.m_model = self.get_model_matrix()
+        super().update()
+
+
+class TransitionGableRoof(TexturedGableRoof):
+    def __init__(
+        self,
+        app,
+        texture_name="cloud_soft",
+        pos=(0, 0, 0),
+        end_pos=None,
+        rot=(0, 0, 0),
+        scale=(1, 1, 1),
+        end_scale=None,
+        tint=(1.0, 1.0, 1.0),
+        end_tint=None,
+        progress_start=0.0,
+        progress_end=1.0,
+        pulse=0.0,
+        use_eased=True,
+        repeat=(1.0, 1.0)
+    ):
+        self.start_pos = glm.vec3(pos)
+        self.end_pos = glm.vec3(end_pos if end_pos is not None else pos)
+        self.start_scale = glm.vec3(scale)
+        self.end_scale = glm.vec3(end_scale if end_scale is not None else scale)
+        self.start_tint = glm.vec3(tint)
+        self.end_tint = glm.vec3(end_tint if end_tint is not None else tint)
+        self.progress_start = progress_start
+        self.progress_end = progress_end
+        self.pulse = pulse
+        self.use_eased = use_eased
+        super().__init__(app, pos=pos, rot=rot, scale=scale, texture_name=texture_name, tint=tint, repeat=repeat)
+
+    def update(self):
+        progress = _transition_local_progress(
+            self.app,
+            self.progress_start,
+            self.progress_end,
+            self.use_eased,
+        )
+        pulse = 1.0
+        if self.pulse:
+            pulse += math.sin(self.app.time * math.tau * 1.7 + self.start_pos.x * 0.37 + self.start_pos.z * 0.23 + self.progress_start * 5.0) * self.pulse
+
+        self.pos = _lerp_vec3(self.start_pos, self.end_pos, progress)
+        self.scale = _lerp_vec3(self.start_scale, self.end_scale, progress) * pulse
+        self.tint = _lerp_vec3(self.start_tint, self.end_tint, progress)
         self.m_model = self.get_model_matrix()
         super().update()
 

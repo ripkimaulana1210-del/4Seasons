@@ -101,6 +101,19 @@ class SceneVillagePropMixin:
                 base_x,
                 base_z,
                 yaw,
+                side * side_x,
+                0.22,
+                front_z,
+                (0.030, 0.22, 0.030),
+                dark_wood,
+            )
+            
+        for side in (-1, 1):
+            self.add_local_cube(
+                app,
+                base_x,
+                base_z,
+                yaw,
                 side * width * 0.72,
                 0.25,
                 front_z,
